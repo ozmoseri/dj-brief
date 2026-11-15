@@ -74,6 +74,7 @@ h3{font-size:17px;font-weight:600;margin:30px 0 10px}
 input[type=text],input[type=tel],input[type=number],input[type=date],input[type=time],input[type=search],textarea,select{
   width:100%;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;min-height:50px}
 textarea{min-height:110px;resize:vertical}
+.tl textarea.ti{min-height:50px;height:50px;resize:none;overflow:hidden;line-height:1.35;padding-top:11px;padding-bottom:11px;field-sizing:content}
 input:disabled,textarea:disabled{background:transparent;color:var(--ink);opacity:.85}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width:420px){.hero h1{font-size:40px}.land .hero h1{font-size:46px}.hero .wordmark{font-size:38px}h2{font-size:36px}.done-box h2{font-size:44px}}
@@ -201,7 +202,8 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
 }
 .land .hero h1{font-size:clamp(44px,13vw,64px)}.land .hero p{font-size:19px}
 .lcta{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 6px}
-.lvid{display:block;width:100%;max-width:340px;aspect-ratio:9/16;margin:26px auto;border-radius:22px;background:#0A0A0B;box-shadow:0 24px 60px rgba(23,19,43,.25)}
+.lv{position:relative;width:fit-content;max-width:100%;margin:26px auto}.lplay{position:absolute;inset:0;margin:auto;width:84px;height:84px;border-radius:50%;border:0;background:var(--accent);box-shadow:0 12px 34px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}.lplay svg{width:40px;height:40px;fill:#fff;margin-inline-start:-4px;transform:scaleX(1)}
+.lvid{display:block;height:min(604px,calc(100dvh - 210px));width:auto;max-width:100%;aspect-ratio:9/16;margin:0 auto;scroll-margin-top:76px;border-radius:22px;background:#0A0A0B;box-shadow:0 24px 60px rgba(23,19,43,.25)}
 .lsec{margin:10px 0 26px}.lf{padding:18px 0;border-top:1.5px solid var(--line)}
 .lf h3{font-family:var(--display);font-weight:700;font-size:32px;line-height:1;margin:0 0 6px}.lf p{margin:0;color:var(--muted)}
 .lprice{background:var(--ink);color:#fff;border-radius:20px;padding:26px 22px;margin:0 0 26px}
@@ -427,6 +429,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register(BASE+'sw.js').
 
 /* ---------- boot ---------- */
 async function boot(){
+  S.sample=/[?&]demo(?:&|=|$)/.test(location.search);
   const m=/^\/(e|r)\/([A-Za-z0-9]{16,64})\/?$/.exec(location.pathname)||/[?&](e|r)=([A-Za-z0-9]{16,64})(?:&|$)/.exec(location.search);
   if(/[?&]x(?:&|=|$)/.test(location.search)&&!m){
     S.mode='discover';S.sample=/[?&]demo(?:&|=|$)/.test(location.search);document.title='DJs וביקורות | סגרנו אירוע';
@@ -494,7 +497,7 @@ const IC={home:'<path d="M4 11.5 12 4l8 7.5V20h-5.5v-5.5h-5V20H4z"/>',djs:'<path
 function tabs(on){
   const home=location.origin+BASE,adm=S.mode==='admin',has=!!ls.get('djkey');
   const it=adm?[['events','אירועים','back',1],['me','הדף שלי',S.dj&&S.dj.slug?profLink(S.dj.slug):home,0],['settings','הגדרות','settings',1]]
-    :[['home','בית',home+'?l',0],['djs','DJs',home+'?x'+(S.sample?'&demo':''),0],has?['events','הניהול שלי',home,0]:['join','הצטרפות',home+'?l#join',0]];
+    :[['home','בית',home+'?l'+(S.sample?'&demo':''),0],['djs','DJs',home+'?x'+(S.sample?'&demo':''),0],has?['events','הניהול שלי',home,0]:['join','הצטרפות',home+'?l'+(S.sample?'&demo':'')+'#join',0]];
   if(on==='home'&&location.hash==='#join'&&!has) on='join';
   const old=app.querySelector('.tabs');old&&old.remove();
   const w=app.querySelector('.wrap');w&&w.classList.add('hastabs');
@@ -522,7 +525,7 @@ function renderLanding(){
   (S.badKey?'<p class="warn">קישור הניהול לא תקין. פתחו את הקישור האישי שקיבלתם.</p>':'')+
   '<h1>פחות וואטסאפ. יותר רחבה.</h1><p>שולחים לזוג קישור אחד. הם ממלאים לבד את כל פרטי האירוע והשירים, ואתם מגיעים עם לו"ז מסודר שרץ מולכם על המחשב.</p>'+
   '<div class="lcta"><a class="btn accent" href="#join">אני רוצה מקום</a><a class="btn ghost" href="?e=aaff67b3c09f4b5eac4b">לראות מה הזוג מקבל</a></div></div>'+
-  '<video class="lvid" controls playsinline preload="none" poster="demo-poster.jpg" src="demo.mp4"></video>'+
+  '<div class="lv"><video class="lvid" controls playsinline preload="none" poster="demo-poster.jpg" src="demo.mp4"></video><button class="lplay" data-act="playdemo" aria-label="ניגון סרטון הדמו"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button></div>'+
   '<section class="lsec" id="how"><h2>איך זה עובד</h2><div class="wl"><div><b>1</b><span><strong>פותחים אירוע</strong>שם הלקוח ותאריך, חצי דקה.</span></div><div><b>2</b><span><strong>שולחים קישור</strong>הלקוח ממלא לבד מהטלפון, בלי הרשמה.</span></div><div><b>3</b><span><strong>מגיעים מוכנים</strong>לו"ז ושירים על המחשב באירוע, גם בלי אינטרנט.</span></div><div><b>4</b><span><strong>אוספים ביקורת</strong>נכנסת לדף האישי שלכם ויורדת כתמונה לסטורי.</span></div></div></section>'+
   '<section class="lsec" id="features"><h2>מה מקבלים</h2>'+
   li('קישור אחד לזוג','בלי הרשמה ובלי אפליקציה להוריד. הם פותחים מהטלפון, ממלאים בחמישה שלבים קצרים, והכל נשמר לבד.')+
@@ -658,7 +661,7 @@ function renderEditor(){
   if(S.step===3){
     h+='<h2>ציר זמן</h2><p class="sub">סדר הערב. אתם וה-DJ עורכים אותו יחד, ואפשר לשנות עד קרוב לאירוע.</p>'+
     (d.timeline.length?'':'<div class="banner soft">עדיין אין ציר זמן. '+(d.start?'אפשר להתחיל מהצעה מוכנה לפי שעת ההתחלה, ולתקן אותה.':'מלאו שעת התחלה בשלב הראשון כדי לקבל הצעה מוכנה, או הוסיפו שורות לבד.')+'</div>')+
-    '<ol class="tl">'+d.timeline.map((r,i)=>'<li><input type="time" aria-label="שעה" data-tl="'+i+'" data-f="time" value="'+esc(r.time||'')+'"'+dis+'><div><input type="text" class="ti" dir="auto" aria-label="מה קורה" data-tl="'+i+'" data-f="title" value="'+esc(r.title||'')+'" placeholder="מה קורה?"'+dis+'><input type="text" class="no" dir="auto" aria-label="הערה" data-tl="'+i+'" data-f="note" value="'+esc(r.note||'')+'" placeholder="הערה לדיג׳יי"'+dis+'></div>'+(ro?'<span></span>':'<button class="x" data-act="tldel" data-i="'+i+'" aria-label="מחיקת השורה">×</button>')+'</li>').join('')+'</ol>'+
+    '<ol class="tl">'+d.timeline.map((r,i)=>'<li><input type="time" aria-label="שעה" data-tl="'+i+'" data-f="time" value="'+esc(r.time||'')+'"'+dis+'><div><textarea class="ti" rows="1" dir="auto" aria-label="מה קורה" data-tl="'+i+'" data-f="title" placeholder="מה קורה?"'+dis+'>'+esc(r.title||'')+'</textarea><input type="text" class="no" dir="auto" aria-label="הערה" data-tl="'+i+'" data-f="note" value="'+esc(r.note||'')+'" placeholder="הערה לדיג׳יי"'+dis+'></div>'+(ro?'<span></span>':'<button class="x" data-act="tldel" data-i="'+i+'" aria-label="מחיקת השורה">×</button>')+'</li>').join('')+'</ol>'+
     (ro?'':'<div class="tlactions"><button class="btn sm" data-act="tladd">הוספת שורה</button>'+(d.start?'<button class="btn sm ghost" data-act="tlplan">'+(d.timeline.length?'החלפה בציר מוצע':'ציר מוצע')+'</button>':'')+(d.timeline.length>1?'<button class="btn sm ghost" data-act="tlsort">סידור לפי שעה</button>':'')+'</div>');
   }
   if(S.step===4){
@@ -865,8 +868,10 @@ function readLogo(file){
   img.src=url;
 }
 app.addEventListener('click',e=>{const m=e.target.closest('.menu nav a,.menu nav button');if(m){const d=m.closest('details');d&&d.removeAttribute('open')}},true);
+const grow=t=>{t.style.height='auto';t.style.height=Math.max(50,t.scrollHeight+3)+'px'};
+new MutationObserver(()=>document.querySelectorAll('.tl textarea.ti').forEach(grow)).observe(app,{childList:true});
+app.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('.tl textarea.ti'))grow(e.target)});
 addEventListener('hashchange',()=>{if(S.mode==='landing')tabs('home')});
-app.addEventListener('click',e=>{const v=e.target.closest('video.lvid');if(v&&!v.dataset.started){v.dataset.started='1';if(v.paused)v.play().catch(()=>{})}},true);
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b) return;
   const a=b.dataset.act,ev=S.ev,d=ev&&ev.data;
@@ -916,6 +921,7 @@ app.addEventListener('click',async e=>{
     case 'back':await flush();S.view='list';try{await loadAdmin()}catch(_){ }render();break;
     case 'settings':S.view='settings';render();break;
     case 'copylink':await copy(clientLink(ev.token));toast('הקישור הועתק');break;
+    case 'playdemo':{const v=$('.lvid');b.remove();v.play().catch(()=>{});break}
     case 'welcome':S.welcomed=true;ls.set('wl_'+S.token,'1');render();scrollTo(0,0);break;
     case 'howon':ls.del('howto_off');S.view='list';render();scrollTo(0,0);break;
     case 'howoff':ls.set('howto_off','1');render();break;
