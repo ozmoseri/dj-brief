@@ -234,6 +234,21 @@ const PLAN={
   '_':[[0,'קבלת פנים'],[45,'כניסה'],[60,'ארוחה'],[105,'ריקודים']]
 };
 const STEPS=['האירוע','מוזיקה','שירים','ציר זמן','סיכום'];
+const MUST_MAX=10;
+const okUrl=u=>/^https:\/\/[^\s"'<>]+$/.test(u||'');
+function stepDone(d,i){
+  if(i===0) return !!(d.names&&d.type&&d.date&&d.start&&d.venue);
+  if(i===1) return d.genres.length>0;
+  if(i===2) return d.must.length>0||okUrl(d.playlist);
+  if(i===3) return d.timeline.length>0;
+  return false;
+}
+function deadline(d){ // last day the client can still edit
+  if(!S.lockDays||!/^\d{4}-\d{2}-\d{2}$/.test(d.date||'')) return null;
+  const end=new Date(d.date+'T00:00:00');end.setDate(end.getDate()-S.lockDays-1);
+  const today=new Date();today.setHours(0,0,0,0);
+  return {days:Math.round((end-today)/864e5),label:String(end.getDate()).padStart(2,'0')+'.'+String(end.getMonth()+1).padStart(2,'0')};
+}
 
 const S={mode:'landing',view:'list',key:null,token:null,dj:null,brand:null,events:[],ev:null,step:0,locked:false,save:'',results:{},q:{},wake:null};
 let saveTimer=null,dirty=false,saving=false,boothTimer=null;
@@ -254,7 +269,7 @@ const clock=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+
 
 function norm(d){
   d=d&&typeof d==='object'?d:{};
-  for(const k of ['genres','must','no','timeline']) if(!Array.isArray(d[k])) d[k]=[];
+  for(const k of ['genres','must','nice','no','timeline']) if(!Array.isArray(d[k])) d[k]=[];
   if(!d.moments||typeof d.moments!=='object') d.moments={};
   return d;
 }
@@ -353,7 +368,7 @@ async function pull(){
     if(rev===S.rev&&lockNow===S.locked){if(S.mode==='admin'&&extra.review&&!same(extra.review,S.ev.review)){S.ev.review=extra.review;if(!busyTyping()&&S.view==='event')render()}return}
     if(busyTyping()&&S.view!=='booth') return; // try again next round
     S.ev.data=norm(data);S.base=clone(S.ev.data);S.rev=rev;
-    if(S.mode==='client') S.locked=extra.is_locked;
+    if(S.mode==='client'){S.locked=extra.is_locked;S.lockDays=extra.lock_days||0}
     else Object.assign(S.ev,{review:extra.review,client_updated_at:extra.client_updated_at,client_seen_at:extra.client_seen_at,is_locked:extra.is_locked,updated_at:extra.updated_at});
     cacheNow();render();
   }catch(_){S.offline=true}
@@ -374,7 +389,7 @@ async function boot(){
     S.mode=m[1]==='r'?'review':'client';S.token=m[2];
     try{
       const r=await rpc('client_get',{p_token:S.token});
-      S.brand=r.brand;S.locked=r.is_locked;S.ev={data:norm(r.data),review:r.review};setAccent(r.brand.accent);
+      S.brand=r.brand;S.locked=r.is_locked;S.lockDays=r.lock_days||0;S.ev={data:norm(r.data),review:r.review};setAccent(r.brand.accent);
       if(S.mode==='review'){S.rv={stars:(r.review&&r.review.stars)||0,done:false};document.title=(r.brand.brand_name||'DJ')+' | איך היה?';render();return}
       document.title=(r.brand.brand_name||'DJ')+' | פרטי האירוע';
       if(S.ev.data.submitted) S.step=4;
@@ -458,7 +473,7 @@ function renderSettings(){
 }
 
 function stepsHTML(n){
-  return '<nav class="steps" aria-label="שלבים">'+n.map((s,i)=>'<button data-act="step" data-i="'+i+'" class="'+(i===S.step?'on':i<S.step?'done':'')+'"'+(i===S.step?' aria-current="step"':'')+'><span class="bar"></span><span class="nm">'+s+'</span></button>').join('')+'</nav>';
+  return '<nav class="steps" aria-label="שלבים">'+n.map((s,i)=>'<button data-act="step" data-i="'+i+'" class="'+(i===S.step?'on':i<S.step?'done':'')+'"'+(i===S.step?' aria-current="step"':'')+'><span class="bar"></span><span class="nm">'+(S.ev&&i<4&&stepDone(S.ev.data,i)?'✓ ':'')+s+'</span></button>').join('')+'</nav>';
 }
 function renderEditor(){
   const admin=S.mode==='admin',d=S.ev.data,ro=!admin&&S.locked,dis=ro?' disabled':'';
@@ -472,6 +487,9 @@ function renderEditor(){
     h+='<div class="top">'+(S.step===0?'<span></span>':brandHTML(S.brand))+'<span class="savestate" aria-live="polite"></span></div>';
     if(S.step===0) h+='<div class="hero">'+brandHTML(S.brand)+'<h1>ספרו לנו על האירוע שלכם</h1><p>כמה דקות וזהו. הכל נשמר אוטומטית, ואפשר לחזור לקישור ולעדכן בכל שלב.</p></div>';
     if(ro) h+='<div class="banner">הטופס ננעל לקראת האירוע. לשינויים של הרגע האחרון דברו ישירות עם ה-DJ.</div>';
+    else{const dl=deadline(d),done=[0,1,2,3].filter(i=>stepDone(d,i)).length;
+      if(dl&&dl.days>=0) h+='<div class="banner soft">'+(dl.days===0?'היום היום האחרון לעדכן את הפרטים.':dl.days===1?'נשאר יום אחד לעדכן, עד <span class="ltr">'+dl.label+'</span>.':'אפשר לעדכן עוד '+dl.days+' ימים, עד <span class="ltr">'+dl.label+'</span>.')+' מילאתם '+done+' מתוך 4 חלקים.</div>';
+      else if(done>0&&done<4) h+='<div class="banner soft">מילאתם '+done+' מתוך 4 חלקים.</div>';}
   }
   h+=stepsHTML(names);
   const f=(k,label,type,extra)=>'<div class="field"><label for="f_'+k+'">'+label+'</label><input type="'+(type||'text')+'" id="f_'+k+'" data-k="'+k+'" value="'+esc(d[k]==null?'':d[k])+'"'+(extra||'')+dis+'></div>';
@@ -479,6 +497,7 @@ function renderEditor(){
   if(S.step===0){
     h+='<h2>האירוע</h2><p class="sub">הפרטים הבסיסיים, כדי שנדע לאן ומתי מגיעים.</p>'+
     f('names','של מי האירוע?','text',' dir="auto" placeholder="למשל: דנה ויואב"')+
+    f('pron','איך מבטאים את השמות?','text',' dir="auto" placeholder="עם ניקוד או כמו שזה נשמע, כדי שנגיד נכון במיקרופון"')+
     '<div class="field"><label>סוג האירוע</label><div class="chips">'+TYPES.map(t=>'<button class="chip'+(d.type===t?' on':'')+'" data-act="type" data-v="'+esc(t)+'" aria-pressed="'+(d.type===t)+'"'+dis+'>'+t+'</button>').join('')+'</div></div>'+
     f('date','תאריך','date')+
     '<div class="row">'+f('start','שעת התחלה','time')+f('end','שעת סיום','time')+'</div>'+
@@ -495,7 +514,10 @@ function renderEditor(){
   }
   if(S.step===2){
     h+='<h2>שירים</h2><p class="sub">חפשו שיר והוסיפו אותו לרשימה. אם לא מצאתם, אפשר פשוט לכתוב וללחוץ אנטר.</p>'+
-    songBlock('must','חובה לנגן','שירים שאתם חייבים לשמוע באירוע',ro)+songBlock('no','לא לנגן','שירים, אמנים או סגנונות שלא רוצים לשמוע',ro);
+    '<div class="field"><label for="f_playlist">יש לכם פלייליסט מוכן?</label><input type="text" inputmode="url" id="f_playlist" data-k="playlist" dir="ltr" value="'+esc(d.playlist||'')+'" placeholder="קישור מספוטיפיי, Apple Music או יוטיוב"'+dis+'>'+(okUrl(d.playlist)?'<div class="hint"><a href="'+esc(d.playlist)+'" target="_blank" rel="noopener">פתיחת הפלייליסט</a></div>':'')+'</div>'+
+    songBlock('must','חובה לנגן ('+d.must.length+' מתוך '+MUST_MAX+')','השירים שהכי חשוב לכם לשמוע',ro)+
+    songBlock('nice','נחמד שיהיה','שירים שתשמחו לשמוע אם יתאים לרחבה',ro)+
+    songBlock('no','לא לנגן','שירים, אמנים או סגנונות שלא רוצים לשמוע',ro);
   }
   if(S.step===3){
     h+='<h2>ציר זמן</h2><p class="sub">סדר הערב. אתם וה-DJ עורכים אותו יחד, ואפשר לשנות עד קרוב לאירוע.</p>'+
@@ -558,8 +580,9 @@ function searchSongs(k,q){
   },350);
 }
 function addSong(k,s){
-  const d=S.ev.data;
-  if(!d[k].some(x=>x.t===s.t&&x.a===s.a)) d[k].push(s);
+  const d=S.ev.data;let to=k;
+  if(k==='must'&&d.must.length>=MUST_MAX){to='nice';toast('רשימת החובה מלאה ('+MUST_MAX+'). הוספנו ל"נחמד שיהיה"')}
+  if(!d[to].some(x=>x.t===s.t&&x.a===s.a)) d[to].push(s);
   S.q[k]='';S.results[k]=[];touch();render();
   const i=document.querySelector('[data-song="'+k+'"]');if(i)i.focus();
 }
@@ -615,11 +638,13 @@ function nowIdx(d){
 function renderBooth(){
   const draw=()=>{
     const e=S.ev,d=e.data,n=new Date(),idx=nowIdx(d),ms=Object.entries(d.moments).filter(x=>x[1]);
-    app.innerHTML='<div class="booth"><div class="bh"><div><div class="bn" dir="auto">'+esc(d.names||'אירוע')+'</div><div class="bm">'+esc([d.type,d.venue,d.guests?d.guests+' מוזמנים':''].filter(Boolean).join(', '))+'</div><div class="bm">'+(S.offline?'אין חיבור. ':'')+'סונכרן לאחרונה '+clock(S.syncedAt||Date.now())+'</div></div>'+
+    app.innerHTML='<div class="booth"><div class="bh"><div><div class="bn" dir="auto">'+esc(d.names||'אירוע')+'</div>'+(d.pron?'<div class="bm" dir="auto">הגייה: '+esc(d.pron)+'</div>':'')+'<div class="bm">'+esc([d.type,d.venue,d.guests?d.guests+' מוזמנים':''].filter(Boolean).join(', '))+'</div><div class="bm">'+(S.offline?'אין חיבור. ':'')+'סונכרן לאחרונה '+clock(S.syncedAt||Date.now())+'</div></div>'+
     '<div style="display:flex;gap:16px;align-items:center"><div class="clock">'+hhmm(n.getHours()*60+n.getMinutes())+'</div><button class="btn sm" data-act="boothexit">יציאה</button></div></div>'+
     '<div class="grid"><div><h4>ציר זמן</h4><ol class="bt">'+(d.timeline.length?d.timeline.map((r,i)=>'<li class="'+(i===idx?'now':i<idx?'past':'')+'"><span class="tm">'+esc(r.time||'')+'</span><span class="tt" dir="auto">'+esc(r.title||'')+(r.note?'<span class="tn" dir="auto">'+esc(r.note)+'</span>':'')+'</span></li>').join(''):'<li><span></span><span class="tn">אין ציר זמן לאירוע הזה.</span></li>')+'</ol>'+
     (ms.length?'<h4>רגעים מיוחדים</h4><ul class="bl">'+ms.map(m=>'<li><small>'+esc(m[0])+'</small><span dir="auto">'+esc(m[1])+'</span></li>').join('')+'</ul>':'')+'</div>'+
     '<div><h4>חובה לנגן ('+d.must.length+')</h4><ul class="bl">'+d.must.map(s=>'<li><span dir="auto">'+esc(s.t)+'</span>'+(s.a?'<small dir="auto">'+esc(s.a)+'</small>':'')+'</li>').join('')+'</ul>'+
+    (d.nice.length?'<h4>נחמד שיהיה ('+d.nice.length+')</h4><ul class="bl">'+d.nice.map(s=>'<li><span dir="auto">'+esc(s.t)+'</span>'+(s.a?'<small dir="auto">'+esc(s.a)+'</small>':'')+'</li>').join('')+'</ul>':'')+
+    (okUrl(d.playlist)?'<h4>פלייליסט של הלקוח</h4><div><a style="color:#fff" href="'+esc(d.playlist)+'" target="_blank" rel="noopener">פתיחה</a></div>':'')+
     '<h4>לא לנגן ('+d.no.length+')</h4><ul class="bl no">'+d.no.map(s=>'<li><span dir="auto">'+esc(s.t)+'</span>'+(s.a?'<small dir="auto">'+esc(s.a)+'</small>':'')+'</li>').join('')+'</ul>'+
     (d.genres.length?'<h4>סגנונות</h4><div>'+esc(d.genres.join(', '))+'</div>':'')+
     (d.vibe?'<h4>הרחבה</h4><div class="notes" dir="auto">'+esc(d.vibe)+'</div>':'')+
@@ -632,7 +657,7 @@ function renderBooth(){
 
 /* ---------- pdf ---------- */
 function printDoc(){
-  const d=S.ev.data,admin=S.mode==='admin',kv=[['סוג האירוע',d.type],['תאריך',fmtDate(d.date)],['שעות',[d.start,d.end].filter(Boolean).join(' עד ')],['מקום',[d.venue,d.city].filter(Boolean).join(', ')],['מוזמנים',d.guests],['איש קשר',[d.contact_name,d.contact_phone?'⁦'+d.contact_phone+'⁩':''].filter(Boolean).join(' ')]].filter(x=>x[1]);
+  const d=S.ev.data,admin=S.mode==='admin',kv=[['סוג האירוע',d.type],['תאריך',fmtDate(d.date)],['שעות',[d.start,d.end].filter(Boolean).join(' עד ')],['מקום',[d.venue,d.city].filter(Boolean).join(', ')],['מוזמנים',d.guests],['הגייה',d.pron],['איש קשר',[d.contact_name,d.contact_phone?'⁦'+d.contact_phone+'⁩':''].filter(Boolean).join(' ')]].filter(x=>x[1]);
   const ms=Object.entries(d.moments).filter(x=>x[1]);
   const song=s=>'<li><bdi>'+esc(s.t)+'</bdi>'+(s.a?', <bdi>'+esc(s.a)+'</bdi>':'')+'</li>';
   $('#print').innerHTML='<div class="ph">'+brandHTML(S.brand)+'<div>סיכום אירוע</div></div>'+
@@ -643,6 +668,8 @@ function printDoc(){
   (d.vibe?'<div class="pre" dir="auto" style="margin-top:6px">'+esc(d.vibe)+'</div>':'')+
   (ms.length?'<h2>רגעים מיוחדים</h2><table>'+ms.map(m=>'<tr><td style="width:40%">'+esc(m[0])+'</td><td dir="auto">'+esc(m[1])+'</td></tr>').join('')+'</table>':'')+
   (d.must.length?'<h2>חובה לנגן</h2><ol>'+d.must.map(song).join('')+'</ol>':'')+
+  (d.nice.length?'<h2>נחמד שיהיה</h2><ul>'+d.nice.map(song).join('')+'</ul>':'')+
+  (okUrl(d.playlist)?'<h2>פלייליסט</h2><div dir="ltr" style="text-align:left;word-break:break-all">'+esc(d.playlist)+'</div>':'')+
   (d.no.length?'<h2>לא לנגן</h2><ul>'+d.no.map(song).join('')+'</ul>':'')+
   (d.notes?'<h2>הערות ובקשות</h2><div class="pre" dir="auto">'+esc(d.notes)+'</div>':'')+
   (admin&&S.ev.dj_notes?'<h2>הערות פרטיות</h2><div class="pre" dir="auto">'+esc(S.ev.dj_notes)+'</div>':'')+
