@@ -211,6 +211,8 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
 .lfoot{font-size:14px;color:var(--muted);margin:26px 0 0}
 .pavg{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:6px 0 4px}.pavg b{font-family:var(--display);font-size:72px;line-height:1}.pavg .s{color:var(--cue);font-size:30px;letter-spacing:2px}.pavg small{flex-basis:100%;color:var(--muted);font-size:15px}
 .wl{margin:8px 0 18px}.wl>div{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-top:1.5px solid var(--line)}.wl b{flex:0 0 44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-family:var(--display);font-size:30px;line-height:44px;text-align:center}.wl span{color:var(--muted)}.wl strong{display:block;color:var(--ink);font-size:19px}
+.how,.links{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 18px}.how h3,.links h3{margin:0}.how .wl{margin:6px 0 0}.how .wl>div:first-child{border-top:0}
+.lk{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1.5px solid var(--line)}.lk>div:first-child{flex:1 1 220px}.lk strong{display:block}.lk span{color:var(--muted);font-size:15px}.lk .actions{margin:0}
 </style>
 </head>
 <body>
@@ -502,7 +504,15 @@ function renderList(){
   app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+'<button class="btn quiet" data-act="settings">הגדרות</button></div>'+
   (S.offline?'<div class="banner soft">אין חיבור כרגע. מוצגים הנתונים מהסנכרון האחרון ('+clock(S.syncedAt)+').</div>':'')+
   '<div class="headrow"><h2>האירועים שלי</h2><button class="btn accent" data-act="new">אירוע חדש</button></div>'+
-  (S.dj.slug?'<div class="actions" style="margin:0 0 14px"><button class="btn sm ghost" data-act="copyprofile">העתקת קישור לדף הביקורות</button><a class="btn sm quiet" target="_blank" rel="noopener" href="'+profLink(S.dj.slug)+'">צפייה בדף</a></div>':'')+
+  (ls.get('howto_off')?'':'<div class="how"><div class="headrow"><h3>איך זה עובד</h3><button class="btn quiet" data-act="howoff">הבנתי, להסתיר</button></div><div class="wl">'+
+    '<div><b>1</b><span><strong>פותחים אירוע חדש</strong>שם הלקוח ותאריך. חצי דקה.</span></div>'+
+    '<div><b>2</b><span><strong>שולחים ללקוח את הקישור של האירוע</strong>הוא ממלא לבד מהטלפון, ואתם רואים כאן הכל מתעדכן.</span></div>'+
+    '<div><b>3</b><span><strong>באירוע פותחים "מצב עמדה"</strong>הלו"ז והשירים רצים מולכם על המחשב.</span></div>'+
+    '<div><b>4</b><span><strong>אחרי האירוע מבקשים דירוג</strong>הביקורת נכנסת לדף האישי שלכם ויורדת כתמונה לסטורי.</span></div></div></div>')+
+  (S.dj.slug?'<div class="links"><h3>הקישורים שלי</h3>'+
+    '<div class="lk"><div><strong>הדף האישי שלי</strong><span>המותג, הביקורות וכפתור וואטסאפ. את זה שמים בביו ושולחים למי שמתעניין.</span></div><div class="actions"><button class="btn sm accent" data-act="copyprofile">העתקה</button><a class="btn sm ghost" target="_blank" rel="noopener" href="'+profLink(S.dj.slug)+'">צפייה</a></div></div>'+
+    '<div class="lk"><div><strong>קישור ללקוח</strong><span>נפרד לכל אירוע. נכנסים לאירוע ולוחצים "העתקת קישור ללקוח".</span></div></div>'+
+    '<div class="lk"><div><strong>קישור הניהול</strong><span>הכניסה האישית שלכם למסך הזה. לא משתפים עם אף אחד.</span></div><div class="actions"><button class="btn sm ghost" data-act="copyadmin">העתקה</button></div></div></div>':'')+
   (evs.length?'':'<p class="empty">עדיין אין אירועים. צרו אירוע חדש, שלחו ללקוח את הקישור, והפרטים יתמלאו כאן.</p>')+
   up.map(row).join('')+(past.length?'<h3>אירועים שעברו</h3>'+past.map(row).join(''):'')+
   ((S.trash||[]).length?'<h3>נמחקו ב-30 הימים האחרונים</h3>'+S.trash.map(t=>'<div class="evrow" style="grid-template-columns:1fr auto"><span><span class="n" dir="auto">'+esc(t.names||'אירוע ללא שם')+'</span><span class="m">'+esc(fmtDate(t.date))+'</span></span><button class="btn sm ghost" data-act="restore" data-id="'+t.id+'">שחזור</button></div>').join(''):'')+'</div>';
@@ -516,7 +526,7 @@ function renderSettings(){
   '<div class="field"><label for="s_logo">לוגו</label>'+(d.logo?'<div style="margin-bottom:10px">'+brandHTML(d)+'</div>':'<div class="hint" style="margin:0 0 10px">בלי קובץ לוגו מוצג סימן שנבנה משם המותג:</div><div style="margin-bottom:10px">'+brandHTML(d)+'</div>')+
   '<input type="file" id="s_logo" accept="image/*">'+(d.logo?' <button class="btn quiet" data-act="rmlogo">הסרת הלוגו</button>':'')+'</div>'+
   '<div class="actions"><button class="btn accent" data-act="savesettings">שמירת הגדרות</button></div>'+
-  '<h3>קישור הניהול שלך</h3><p class="sub">הקישור הזה הוא המפתח לכל האירועים. אל תשתפו אותו עם לקוחות. כדאי לשמור אותו במועדפים או להוסיף למסך הבית.</p><button class="btn ghost" data-act="copyadmin">העתקת קישור הניהול</button></div>';
+  '<h3>קישור הניהול שלך</h3><p class="sub">הקישור הזה הוא המפתח לכל האירועים. אל תשתפו אותו עם לקוחות. כדאי לשמור אותו במועדפים או להוסיף למסך הבית.</p><div class="actions"><button class="btn ghost" data-act="copyadmin">העתקת קישור הניהול</button><button class="btn danger" data-act="rotate">החלפת הקישור</button></div><p class="sub">אם הקישור הגיע למישהו אחר, החלפה מבטלת אותו ויוצרת חדש.</p><p class="sub"><button class="btn quiet" data-act="howon">להציג שוב את "איך זה עובד"</button></p></div>';
 }
 
 function stepsHTML(n){
@@ -657,7 +667,7 @@ function renderProfile(){
   (n?'<div class="pavg"><b class="ltr">'+avg.toFixed(1)+'</b><span class="s" aria-hidden="true">'+'★'.repeat(Math.round(avg))+'</span><small>'+(n===1?'ביקורת אחת':n+' ביקורות')+(S.sample?' לדוגמה':' מלקוחות אחרי האירוע')+'</small></div>':'<p>עדיין אין כאן ביקורות. הן יופיעו אחרי האירועים הקרובים.</p>')+
   (b.phone?'<div class="lcta"><a class="btn accent" target="_blank" rel="noopener" href="https://wa.me/'+waPhone(b.phone)+'?text='+encodeURIComponent('היי, ראיתי את הביקורות ורציתי לבדוק תאריך לאירוע')+'">לבדוק תאריך בוואטסאפ</a></div>':'')+'</div>'+
   rs.map(r=>'<div class="revbox"><div class="s" aria-label="'+r.stars+' מתוך 5">'+'★'.repeat(r.stars)+'</div>'+(r.text?'<p dir="auto">'+esc(r.text)+'</p>':'')+'<small dir="auto">'+esc([r.name,r.type,dt(r.at)].filter(Boolean).join(' , '))+'</small></div>').join('')+
-  '<p class="lfoot">'+(S.sample?'בדף האמיתי יופיעו רק ביקורות שלקוחות כתבו דרך הקישור האישי שקיבלו אחרי האירוע.':'הביקורות נכתבו על ידי לקוחות דרך קישור אישי שקיבלו אחרי האירוע.')+'</p></div>';
+  '<p class="lfoot">'+(S.sample?'בדף האמיתי יופיעו רק ביקורות שלקוחות כתבו דרך הקישור האישי שקיבלו אחרי האירוע.':'הביקורות נכתבו על ידי לקוחות דרך קישור אישי שקיבלו אחרי האירוע.')+'</p><p class="lfoot">DJ? <a href="'+location.origin+BASE+'?l">גם לכם יכול להיות דף כזה, עם סגרנו אירוע</a></p></div>';
 }
 function renderReview(){
   const d=S.ev.data,r=S.ev.review||{},v=S.rv;
@@ -829,6 +839,9 @@ app.addEventListener('click',async e=>{
     case 'settings':S.view='settings';render();break;
     case 'copylink':await copy(clientLink(ev.token));toast('הקישור הועתק');break;
     case 'welcome':S.welcomed=true;ls.set('wl_'+S.token,'1');render();scrollTo(0,0);break;
+    case 'howon':ls.del('howto_off');S.view='list';render();scrollTo(0,0);break;
+    case 'howoff':ls.set('howto_off','1');render();break;
+    case 'rotate':if(confirm('להחליף את קישור הניהול? הקישור הישן יפסיק לעבוד מיד, בכל המכשירים.')){try{const r=await rpc('dj_rotate_key',{p_key:S.key});S.key=r.key;ls.set('djkey',r.key);await copy(location.origin+BASE+'#k='+S.key);toast('הקישור הוחלף והועתק. שמרו אותו עכשיו')}catch(_){toast('ההחלפה נכשלה. נסו שוב')}}break;
     case 'copyprofile':await copy(profLink(S.dj.slug));toast('הקישור לדף הביקורות הועתק');break;
     case 'revpub':{const on=b.checked;try{await rpc('dj_review_public',{p_key:S.key,p_id:ev.id,p_public:on});ev.review_public=on;toast(on?'הביקורת מוצגת בדף':'הביקורת הוסרה מהדף')}catch(_){b.checked=!on;toast('השמירה נכשלה. נסו שוב')}break}
     case 'copyadmin':await copy(location.origin+BASE+'#k='+S.key);toast('קישור הניהול הועתק');break;
