@@ -389,7 +389,7 @@ async function boot(){
     S.mode=m[1]==='r'?'review':'client';S.token=m[2];
     try{
       const r=await rpc('client_get',{p_token:S.token});
-      S.brand=r.brand;S.locked=r.is_locked;S.lockDays=r.lock_days||0;S.ev={data:norm(r.data),review:r.review};setAccent(r.brand.accent);
+      S.brand=r.brand;S.locked=r.is_locked;S.lockDays=r.lock_days||0;S.demo=!!r.is_demo;S.ev={data:norm(r.data),review:r.review};setAccent(r.brand.accent);
       if(S.mode==='review'){S.rv={stars:(r.review&&r.review.stars)||0,done:false};document.title=(r.brand.brand_name||'DJ')+' | איך היה?';render();return}
       document.title=(r.brand.brand_name||'DJ')+' | פרטי האירוע';
       if(S.ev.data.submitted) S.step=4;
@@ -486,6 +486,7 @@ function renderEditor(){
   }else{
     h+='<div class="top">'+(S.step===0?'<span></span>':brandHTML(S.brand))+'<span class="savestate" aria-live="polite"></span></div>';
     if(S.step===0) h+='<div class="hero">'+brandHTML(S.brand)+'<h1>ספרו לנו על האירוע שלכם</h1><p>כמה דקות וזהו. הכל נשמר אוטומטית, ואפשר לחזור לקישור ולעדכן בכל שלב.</p></div>';
+    if(S.demo) h+='<div class="banner soft">זה אירוע לדוגמה. אפשר לשחק עם הטופס בחופשיות, השינויים לא נשמרים.</div>';
     if(ro) h+='<div class="banner">הטופס ננעל לקראת האירוע. לשינויים של הרגע האחרון דברו ישירות עם ה-DJ.</div>';
     else{const dl=deadline(d),done=[0,1,2,3].filter(i=>stepDone(d,i)).length;
       if(dl&&dl.days>=0) h+='<div class="banner soft">'+(dl.days===0?'היום היום האחרון לעדכן את הפרטים.':dl.days===1?'נשאר יום אחד לעדכן, עד <span class="ltr">'+dl.label+'</span>.':'אפשר לעדכן עוד '+dl.days+' ימים, עד <span class="ltr">'+dl.label+'</span>.')+' מילאתם '+done+' מתוך 4 חלקים.</div>';
@@ -729,7 +730,7 @@ app.addEventListener('click',async e=>{
       d.timeline=p.map(x=>({time:hhmm(s+x[0]),title:x[1],note:''}));
       if(en!=null){if(en<=s)en+=1440;d.timeline=d.timeline.filter(r=>tlKey(r.time,d.start)<en);d.timeline.push({time:hhmm(en),title:'סיום',note:''})}
       touch();render();break}
-    case 'submit':d.submitted=true;d.submitted_at=new Date().toISOString();dirty=true;await flush();render();toast('נשלח. תודה!');break;
+    case 'submit':if(S.demo){toast('באירוע אמיתי הפרטים היו נשלחים עכשיו ל-DJ');break}d.submitted=true;d.submitted_at=new Date().toISOString();dirty=true;await flush();render();toast('נשלח. תודה!');break;
     case 'pdf':printDoc();break;
     case 'star':S.rv.text=$('#r_text').value;S.rv.name=$('#r_name').value;S.rv.stars=+b.dataset.i;render();break;
     case 'sendreview':{

@@ -27,6 +27,7 @@ Supabase project `dj-event-brief` (ref `vtuyhvbgcwlzwtjlnydb`, eu-central-1, org
 - `dj_get`, `dj_get_event`, `dj_create_event`, `dj_save_event`, `dj_delete_event` (soft delete, 30 days), `dj_restore_event`, `dj_update_profile`, `client_get`, `client_save`, `client_review`.
 - Saves send `p_base` (the `updated_at` last seen). A mismatch returns `{conflict:true,...}` and the client merges per top-level field (`merge3`) and saves again.
 - Event content lives in `events.data` (jsonb): `names, pron, type, date, start, end, venue, city, guests, contact_name, contact_phone, genres[], vibe, moments{}, playlist, must[], nice[], no[], timeline[], notes, submitted`.
+- `events.is_demo`: a demo event. `client_save` and `client_review` answer ok without writing, so every visitor gets a fresh sample.
 - Locking: `locked`, or automatic `lock_days` before `data.date`, enforced in `client_save`.
 
 ## Rules
