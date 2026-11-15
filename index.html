@@ -213,6 +213,13 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
 .wl{margin:8px 0 18px}.wl>div{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-top:1.5px solid var(--line)}.wl b{flex:0 0 44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-family:var(--display);font-size:30px;line-height:44px;text-align:center}.wl span{color:var(--muted)}.wl strong{display:block;color:var(--ink);font-size:19px}
 .how,.links{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;margin:0 0 18px}.how h3,.links h3{margin:0}.how .wl{margin:6px 0 0}.how .wl>div:first-child{border-top:0}
 .lk{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1.5px solid var(--line)}.lk>div:first-child{flex:1 1 220px}.lk strong{display:block}.lk span{color:var(--muted);font-size:15px}.lk .actions{margin:0}
+.menu{position:relative}.menu summary{list-style:none;cursor:pointer;width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.menu summary::-webkit-details-marker{display:none}.menu summary span{display:block;width:20px;height:2.5px;border-radius:2px;background:var(--ink)}
+.menu nav{position:absolute;inset-inline-end:0;top:54px;z-index:30;min-width:240px;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:6px;box-shadow:0 18px 50px rgba(23,19,43,.18);display:flex;flex-direction:column}
+.menu nav a,.menu nav button{display:block;text-align:start;padding:13px 14px;border:0;background:none;border-radius:10px;color:var(--ink);text-decoration:none;font-weight:500;font-size:17px}
+.menu nav a:hover,.menu nav button:hover{background:var(--paper)}
+.lnav{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 0}.lnav .wordmark{font-size:30px}.lnav .mark{height:30px}
+.land .lsec h2{margin-top:6px}.land section{scroll-margin-top:76px}
 </style>
 </head>
 <body>
@@ -295,6 +302,9 @@ function setAccent(c){
   const lum=(0.299*r+0.587*g+0.114*b)/255;
   document.documentElement.style.setProperty('--accent',c);
   document.documentElement.style.setProperty('--on-accent',lum>0.62?'#17132B':'#FFFFFF');
+}
+function menuHTML(items){
+  return '<details class="menu"><summary aria-label="תפריט"><span></span><span></span><span></span></summary><nav>'+items.map(i=>i[2]?'<button data-act="'+i[1]+'">'+i[0]+'</button>':'<a href="'+i[1]+'"'+(i[3]?' target="_blank" rel="noopener"':'')+'>'+i[0]+'</a>').join('')+'</nav></details>';
 }
 function brandHTML(b){
   b=b||{};
@@ -459,19 +469,21 @@ function render(){
 function renderLanding(){
   document.title='סגרנו אירוע - כל פרטי האירוע בקישור אחד';
   const li=(t,d)=>'<div class="lf"><h3>'+t+'</h3><p>'+d+'</p></div>';
-  app.innerHTML='<div class="wrap land"><div class="hero">'+brandHTML({brand_name:'סגרנו אירוע'})+
+  const home=location.origin+BASE;
+  app.innerHTML='<div class="wrap land"><div class="top lnav">'+brandHTML({brand_name:'סגרנו אירוע'})+menuHTML([['איך זה עובד','#how'],['מה מקבלים','#features'],['מחיר','#price'],['דוגמה: מה הזוג רואה','?e=aaff67b3c09f4b5eac4b'],['דוגמה: דף ביקורות של DJ','?d=djlielmalka&demo'],['הצטרפות','#join'],[ls.get('djkey')?'למסך הניהול שלי':'כניסת DJ',ls.get('djkey')?home:'#login']])+'</div><div class="hero">'+
   (S.badKey?'<p class="warn">קישור הניהול לא תקין. פתחו את הקישור האישי שקיבלתם.</p>':'')+
   '<h1>פחות וואטסאפ. יותר רחבה.</h1><p>שולחים לזוג קישור אחד. הם ממלאים לבד את כל פרטי האירוע והשירים, ואתם מגיעים עם לו"ז מסודר שרץ מולכם על המחשב.</p>'+
   '<div class="lcta"><a class="btn accent" href="#join">אני רוצה מקום</a><a class="btn ghost" href="?e=aaff67b3c09f4b5eac4b">לראות מה הזוג מקבל</a></div></div>'+
   '<video class="lvid" controls playsinline preload="none" poster="demo-poster.jpg" src="demo.mp4"></video>'+
-  '<section class="lsec">'+
+  '<section class="lsec" id="how"><h2>איך זה עובד</h2><div class="wl"><div><b>1</b><span><strong>פותחים אירוע</strong>שם הלקוח ותאריך, חצי דקה.</span></div><div><b>2</b><span><strong>שולחים קישור</strong>הלקוח ממלא לבד מהטלפון, בלי הרשמה.</span></div><div><b>3</b><span><strong>מגיעים מוכנים</strong>לו"ז ושירים על המחשב באירוע, גם בלי אינטרנט.</span></div><div><b>4</b><span><strong>אוספים ביקורת</strong>נכנסת לדף האישי שלכם ויורדת כתמונה לסטורי.</span></div></div></section>'+
+  '<section class="lsec" id="features"><h2>מה מקבלים</h2>'+
   li('קישור אחד לזוג','בלי הרשמה ובלי אפליקציה להוריד. הם פותחים מהטלפון, ממלאים בחמישה שלבים קצרים, והכל נשמר לבד.')+
   li('חובה לנגן, לא לנגן','חיפוש שירים אמיתי, רשימת חובה, רשימת אסור, ושיר לכל רגע: כניסה, חופה, ריקוד ראשון. הכל כתוב, נגמר ה"אמרתי לך".')+
   li('מצב עמדה באירוע','הלו"ז רץ על המחשב ומסמן מה קורה עכשיו ומה הבא. עובד גם כשאין קליטה באולם.')+
   li('דירוג שהופך לסטורי','אחרי האירוע הזוג מדרג בלחיצה, ואתם מורידים תמונה מוכנה לסטורי עם המותג שלכם.')+
   li('המותג שלכם, לא שלנו','הלוגו, השם והצבע שלכם על הטופס, על ה-PDF ועל הסטורי.')+
   '</section>'+
-  '<section class="lprice"><h2>20 מקומות ראשונים</h2><p class="big"><b>החודש הראשון עלינו</b></p><p>אחר כך <span dir="ltr">39 ₪</span> לחודש למצטרפים הראשונים, במקום <span dir="ltr">69 ₪</span>. בלי התחייבות, מבטלים בהודעה.</p></section>'+
+  '<section class="lprice" id="price"><h2>20 מקומות ראשונים</h2><p class="big"><b>החודש הראשון עלינו</b></p><p>אחר כך <span dir="ltr">39 ₪</span> לחודש למצטרפים הראשונים, במקום <span dir="ltr">69 ₪</span>. בלי התחייבות, מבטלים בהודעה.</p></section>'+
   '<section class="card" id="join"><h2>שומרים לכם מקום</h2>'+
   (S.joined?'<p class="ok">קיבלנו. נחזור אליכם בוואטסאפ עם קישור הניהול האישי שלכם.</p>':
   '<p class="hint">משאירים פרטים ואנחנו פותחים לכם חשבון ושולחים קישור ניהול בוואטסאפ.</p>'+
@@ -481,7 +493,7 @@ function renderLanding(){
   '<button class="btn accent" data-act="join">שלחו לי קישור</button>'+
   '<p class="hint">הפרטים משמשים רק ליצירת קשר לגבי השירות. <a href="privacy.html">מדיניות פרטיות</a></p>')+
   '</section>'+
-  '<p class="lfoot">כבר יש לכם חשבון? נכנסים דרך קישור הניהול האישי. זוג שקיבל קישור מה-DJ נכנס דרכו. <a href="privacy.html">פרטיות ותנאים</a></p></div>';
+  '<p class="lfoot" id="login">כבר יש לכם חשבון? נכנסים דרך קישור הניהול האישי שקיבלתם בוואטסאפ. כדאי לשמור אותו במסך הבית של הטלפון. זוג שקיבל קישור מה-DJ נכנס דרכו. <a href="privacy.html">פרטיות ותנאים</a></p></div>';
 }
 
 function status(e){
@@ -501,7 +513,7 @@ function renderList(){
     '<span><span class="n" dir="auto">'+esc(d.names||'אירוע ללא שם')+'</span><span class="m">'+esc([d.type,d.venue].filter(Boolean).join(', '))+'</span></span>'+
     '<span class="st '+st[0]+'">'+st[1]+'</span></button>';
   };
-  app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+'<button class="btn quiet" data-act="settings">הגדרות</button></div>'+
+  app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+menuHTML([['האירועים שלי','back',1],['אירוע חדש','new',1],['הדף האישי והביקורות',S.dj.slug?profLink(S.dj.slug):'#',0,1],['הגדרות המותג','settings',1],['איך זה עובד','howon',1],['האתר של סגרנו אירוע',location.origin+BASE+'?l',0,1]])+'</div>'+
   (S.offline?'<div class="banner soft">אין חיבור כרגע. מוצגים הנתונים מהסנכרון האחרון ('+clock(S.syncedAt)+').</div>':'')+
   '<div class="headrow"><h2>האירועים שלי</h2><button class="btn accent" data-act="new">אירוע חדש</button></div>'+
   (ls.get('howto_off')?'':'<div class="how"><div class="headrow"><h3>איך זה עובד</h3><button class="btn quiet" data-act="howoff">הבנתי, להסתיר</button></div><div class="wl">'+
@@ -789,6 +801,7 @@ function readLogo(file){
   img.onerror=()=>toast('לא הצלחנו לקרוא את הקובץ. נסו תמונה אחרת');
   img.src=url;
 }
+app.addEventListener('click',e=>{const m=e.target.closest('.menu nav a,.menu nav button');if(m){const d=m.closest('details');d&&d.removeAttribute('open')}},true);
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b) return;
   const a=b.dataset.act,ev=S.ev,d=ev&&ev.data;
