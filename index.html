@@ -402,7 +402,7 @@ async function boot(){
   const pm=/[?&]d=([A-Za-z0-9_-]{6,40})(?:&|$)/.exec(location.search);
   if(pm&&!m){
     S.mode='profile';
-    try{const r=await rpc('dj_public',{p_slug:pm[1]});S.brand=r.brand;S.reviews=r.reviews||[];setAccent(r.brand.accent);document.title=(r.brand.brand_name||'DJ')+' | ביקורות';render()}
+    try{const r=await rpc('dj_public',{p_slug:pm[1]});S.brand=r.brand;S.reviews=r.reviews||[];S.sample=/[?&]demo(?:&|=|$)/.test(location.search);if(S.sample)S.reviews=[{stars:5,text:'הרחבה הייתה מלאה מהשיר הראשון ועד האחרון. כל מה שביקשנו התנגן בדיוק ברגע הנכון.',name:'שם הלקוח',type:'חתונה',at:'2026-10-20'},{stars:5,text:'מילאנו את הטופס בחמש דקות והוא הגיע מוכן לגמרי. אפס כאב ראש.',name:'שם הלקוח',type:'בר / בת מצווה',at:'2026-09-12'},{stars:4,text:'מקצועי, קשוב ונעים. הקפיד על רשימת ה"לא לנגן" שלנו.',name:'שם הלקוח',type:'יום הולדת',at:'2026-08-03'}];setAccent(r.brand.accent);document.title=(r.brand.brand_name||'DJ')+' | ביקורות';render()}
     catch(e){app.innerHTML='<div class="wrap"><div class="hero"><h1>הדף לא נמצא</h1><p>ייתכן שהקישור הועתק חלקית.</p></div></div>'}
     return;
   }
@@ -653,11 +653,11 @@ const profLink=slug=>location.origin+BASE+'?d='+slug;
 function renderProfile(){
   const rs=S.reviews,b=S.brand,n=rs.length,avg=n?rs.reduce((a,r)=>a+r.stars,0)/n:0;
   const dt=a=>{const d=new Date(a);return isNaN(d)?'':('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear()};
-  app.innerHTML='<div class="wrap"><div class="hero">'+brandHTML(b)+'<h1>מה אומרים הלקוחות</h1>'+
-  (n?'<div class="pavg"><b class="ltr">'+avg.toFixed(1)+'</b><span class="s" aria-hidden="true">'+'★'.repeat(Math.round(avg))+'</span><small>'+(n===1?'ביקורת אחת':n+' ביקורות')+' מלקוחות אחרי האירוע</small></div>':'<p>עדיין אין כאן ביקורות. הן יופיעו אחרי האירועים הקרובים.</p>')+
+  app.innerHTML='<div class="wrap">'+(S.sample?'<div class="banner soft" style="margin-top:16px">תצוגה לדוגמה. הביקורות כאן הן טקסט להמחשה ולא של לקוחות אמיתיים.</div>':'')+'<div class="hero">'+brandHTML(b)+'<h1>מה אומרים הלקוחות</h1>'+
+  (n?'<div class="pavg"><b class="ltr">'+avg.toFixed(1)+'</b><span class="s" aria-hidden="true">'+'★'.repeat(Math.round(avg))+'</span><small>'+(n===1?'ביקורת אחת':n+' ביקורות')+(S.sample?' לדוגמה':' מלקוחות אחרי האירוע')+'</small></div>':'<p>עדיין אין כאן ביקורות. הן יופיעו אחרי האירועים הקרובים.</p>')+
   (b.phone?'<div class="lcta"><a class="btn accent" target="_blank" rel="noopener" href="https://wa.me/'+waPhone(b.phone)+'?text='+encodeURIComponent('היי, ראיתי את הביקורות ורציתי לבדוק תאריך לאירוע')+'">לבדוק תאריך בוואטסאפ</a></div>':'')+'</div>'+
   rs.map(r=>'<div class="revbox"><div class="s" aria-label="'+r.stars+' מתוך 5">'+'★'.repeat(r.stars)+'</div>'+(r.text?'<p dir="auto">'+esc(r.text)+'</p>':'')+'<small dir="auto">'+esc([r.name,r.type,dt(r.at)].filter(Boolean).join(' , '))+'</small></div>').join('')+
-  '<p class="lfoot">הביקורות נכתבו על ידי לקוחות דרך קישור אישי שקיבלו אחרי האירוע.</p></div>';
+  '<p class="lfoot">'+(S.sample?'בדף האמיתי יופיעו רק ביקורות שלקוחות כתבו דרך הקישור האישי שקיבלו אחרי האירוע.':'הביקורות נכתבו על ידי לקוחות דרך קישור אישי שקיבלו אחרי האירוע.')+'</p></div>';
 }
 function renderReview(){
   const d=S.ev.data,r=S.ev.review||{},v=S.rv;
