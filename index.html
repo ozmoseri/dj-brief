@@ -197,6 +197,18 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
   #print .mark i{background:#000;print-color-adjust:exact;-webkit-print-color-adjust:exact}
   #print .foot{margin-top:24px;font-size:9pt;color:#555}
 }
+.land .hero h1{font-size:76px}.land .hero p{font-size:19px}
+.lcta{display:flex;flex-wrap:wrap;gap:10px;margin:22px 0 6px}
+.lvid{display:block;width:100%;max-width:340px;aspect-ratio:9/16;margin:26px auto;border-radius:22px;background:#0A0A0B;box-shadow:0 24px 60px rgba(23,19,43,.25)}
+.lsec{margin:10px 0 26px}.lf{padding:18px 0;border-top:1.5px solid var(--line)}
+.lf h3{font-family:var(--display);font-weight:700;font-size:38px;line-height:1;margin:0 0 6px}.lf p{margin:0;color:var(--muted)}
+.lprice{background:var(--ink);color:#fff;border-radius:20px;padding:26px 22px;margin:0 0 26px}
+.lprice h2{font-family:var(--display);font-size:54px;line-height:1;margin:0 0 4px;color:var(--cue)}
+.lprice .big{font-size:24px;margin:0 0 8px}.lprice p{margin:0;color:#D9D5EA}
+#join{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:24px 22px;scroll-margin-top:20px}
+#join h2{font-family:var(--display);font-size:46px;line-height:1;margin:0 0 8px}
+.land .hint{font-size:14px;color:var(--muted)}.land .ok{color:var(--ok);font-weight:600}.land .warn{color:var(--bad);font-weight:600}
+.lfoot{font-size:14px;color:var(--muted);margin:26px 0 0}
 </style>
 </head>
 <body>
@@ -403,6 +415,7 @@ async function boot(){
   const h=/[#&]k=([A-Za-z0-9]{20,64})/.exec(location.hash);
   if(h){ls.set('djkey',h[1]);history.replaceState(null,'',BASE)}
   S.key=ls.get('djkey');
+  if(new URLSearchParams(location.search).has('l')){S.mode='landing';render();return}
   if(!S.key){S.mode='landing';render();return}
   S.mode='admin';
   try{await loadAdmin()}catch(e){
@@ -432,8 +445,31 @@ function render(){
   renderList();
 }
 function renderLanding(){
-  app.innerHTML='<div class="wrap"><div class="hero">'+brandHTML({brand_name:'סגרנו אירוע'})+
-  '<h1>כל פרטי האירוע במקום אחד</h1><p>'+(S.badKey?'קישור הניהול לא תקין. פתחו את הקישור האישי שקיבלתם.':'לקוחות נכנסים דרך הקישור שקיבלו מה-DJ. DJ נכנס דרך קישור הניהול האישי שלו.')+'</p></div></div>';
+  document.title='סגרנו אירוע - כל פרטי האירוע בקישור אחד';
+  const li=(t,d)=>'<div class="lf"><h3>'+t+'</h3><p>'+d+'</p></div>';
+  app.innerHTML='<div class="wrap land"><div class="hero">'+brandHTML({brand_name:'סגרנו אירוע'})+
+  (S.badKey?'<p class="warn">קישור הניהול לא תקין. פתחו את הקישור האישי שקיבלתם.</p>':'')+
+  '<h1>פחות וואטסאפ. יותר רחבה.</h1><p>שולחים לזוג קישור אחד. הם ממלאים לבד את כל פרטי האירוע והשירים, ואתם מגיעים עם לו"ז מסודר שרץ מולכם על המחשב.</p>'+
+  '<div class="lcta"><a class="btn accent" href="#join">אני רוצה מקום</a><a class="btn ghost" href="?e=aaff67b3c09f4b5eac4b">לראות מה הזוג מקבל</a></div></div>'+
+  '<video class="lvid" controls playsinline preload="none" poster="demo-poster.jpg" src="demo.mp4"></video>'+
+  '<section class="lsec">'+
+  li('קישור אחד לזוג','בלי הרשמה ובלי אפליקציה להוריד. הם פותחים מהטלפון, ממלאים בחמישה שלבים קצרים, והכל נשמר לבד.')+
+  li('חובה לנגן, לא לנגן','חיפוש שירים אמיתי, רשימת חובה, רשימת אסור, ושיר לכל רגע: כניסה, חופה, ריקוד ראשון. הכל כתוב, נגמר ה"אמרתי לך".')+
+  li('מצב עמדה באירוע','הלו"ז רץ על המחשב ומסמן מה קורה עכשיו ומה הבא. עובד גם כשאין קליטה באולם.')+
+  li('דירוג שהופך לסטורי','אחרי האירוע הזוג מדרג בלחיצה, ואתם מורידים תמונה מוכנה לסטורי עם המותג שלכם.')+
+  li('המותג שלכם, לא שלנו','הלוגו, השם והצבע שלכם על הטופס, על ה-PDF ועל הסטורי.')+
+  '</section>'+
+  '<section class="lprice"><h2>20 מקומות ראשונים</h2><p class="big"><b>החודש הראשון עלינו</b></p><p>אחר כך <span dir="ltr">39 ₪</span> לחודש למצטרפים הראשונים, במקום <span dir="ltr">69 ₪</span>. בלי התחייבות, מבטלים בהודעה.</p></section>'+
+  '<section class="card" id="join"><h2>שומרים לכם מקום</h2>'+
+  (S.joined?'<p class="ok">קיבלנו. נחזור אליכם בוואטסאפ עם קישור הניהול האישי שלכם.</p>':
+  '<p class="hint">משאירים פרטים ואנחנו פותחים לכם חשבון ושולחים קישור ניהול בוואטסאפ.</p>'+
+  '<div class="field"><label for="j_name">שם</label><input type="text" id="j_name" autocomplete="name" maxlength="80"></div>'+
+  '<div class="field"><label for="j_phone">טלפון</label><input type="tel" id="j_phone" autocomplete="tel" dir="ltr" maxlength="20"></div>'+
+  '<div class="field"><label for="j_brand">שם המותג שלכם</label><input type="text" id="j_brand" maxlength="80"><div class="hint">למשל DJ ישראל ישראלי. אפשר לשנות אחר כך.</div></div>'+
+  '<button class="btn accent" data-act="join">שלחו לי קישור</button>'+
+  '<p class="hint">הפרטים משמשים רק ליצירת קשר לגבי השירות. <a href="privacy.html">מדיניות פרטיות</a></p>')+
+  '</section>'+
+  '<p class="lfoot">כבר יש לכם חשבון? נכנסים דרך קישור הניהול האישי. זוג שקיבל קישור מה-DJ נכנס דרכו. <a href="privacy.html">פרטיות ותנאים</a></p></div>';
 }
 
 function status(e){
@@ -730,6 +766,14 @@ app.addEventListener('click',async e=>{
       d.timeline=p.map(x=>({time:hhmm(s+x[0]),title:x[1],note:''}));
       if(en!=null){if(en<=s)en+=1440;d.timeline=d.timeline.filter(r=>tlKey(r.time,d.start)<en);d.timeline.push({time:hhmm(en),title:'סיום',note:''})}
       touch();render();break}
+    case 'join':{
+      const n=$('#j_name').value.trim(),p=$('#j_phone').value.trim(),br=$('#j_brand').value.trim();
+      if(n.length<2){toast('חסר שם');break}
+      if(p.replace(/[^0-9]/g,'').length<9){toast('מספר הטלפון לא נראה תקין');break}
+      b.disabled=true;
+      try{await rpc('join_request',{p_name:n,p_phone:p,p_brand:br});S.joined=true;render();const j=$('#join');j&&j.scrollIntoView({block:'center'})}
+      catch(err){b.disabled=false;toast(err.message==='bad_phone'?'מספר הטלפון לא נראה תקין':'השליחה נכשלה. בדקו את החיבור ונסו שוב')}
+      break}
     case 'submit':if(S.demo){toast('באירוע אמיתי הפרטים היו נשלחים עכשיו ל-DJ');break}d.submitted=true;d.submitted_at=new Date().toISOString();dirty=true;await flush();render();toast('נשלח. תודה!');break;
     case 'pdf':printDoc();break;
     case 'star':S.rv.text=$('#r_text').value;S.rv.name=$('#r_name').value;S.rv.stars=+b.dataset.i;render();break;
