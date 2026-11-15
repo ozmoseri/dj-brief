@@ -210,6 +210,7 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
 .land .hint{font-size:14px;color:var(--muted)}.land .ok{color:var(--ok);font-weight:600}.land .warn{color:var(--bad);font-weight:600}
 .lfoot{font-size:14px;color:var(--muted);margin:26px 0 0}
 .pavg{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:6px 0 4px}.pavg b{font-family:var(--display);font-size:72px;line-height:1}.pavg .s{color:var(--cue);font-size:30px;letter-spacing:2px}.pavg small{flex-basis:100%;color:var(--muted);font-size:15px}
+.wl{margin:8px 0 18px}.wl>div{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-top:1.5px solid var(--line)}.wl b{flex:0 0 44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-family:var(--display);font-size:30px;line-height:44px;text-align:center}.wl span{color:var(--muted)}.wl strong{display:block;color:var(--ink);font-size:19px}
 </style>
 </head>
 <body>
@@ -523,6 +524,18 @@ function stepsHTML(n){
 }
 function renderEditor(){
   const admin=S.mode==='admin',d=S.ev.data,ro=!admin&&S.locked,dis=ro?' disabled':'';
+  if(!admin&&!ro&&!d.submitted&&!S.welcomed&&!ls.get('wl_'+S.token)){
+    const dl=deadline(d),nm=esc(S.brand.brand_name||'ה-DJ');
+    app.innerHTML='<div class="wrap"><div class="hero">'+brandHTML(S.brand)+'<h1>'+(d.names?esc(d.names)+', ':'')+'בואו נסגור את המוזיקה</h1>'+
+    '<p>כדי שהאירוע יישמע בדיוק כמו שאתם רוצים, '+nm+' צריך מכם כמה פרטים. ממלאים כאן פעם אחת, במקום עשרות הודעות בוואטסאפ.</p></div>'+
+    '<div class="wl"><div><b>1</b><span><strong>פרטי האירוע</strong>תאריך, מקום, שעות ואיש קשר.</span></div>'+
+    '<div><b>2</b><span><strong>הסגנון והשירים שלכם</strong>מה חובה לנגן, מה נחמד שיהיה, ומה בשום אופן לא.</span></div>'+
+    '<div><b>3</b><span><strong>הרגעים המיוחדים</strong>איזה שיר מתנגן בכניסה, בריקוד, בהפתעה, ומתי כל דבר קורה.</span></div></div>'+
+    '<p class="sub">לוקח בערך חמש דקות. הכל נשמר לבד, לא צריך להירשם, ואפשר לחזור לאותו קישור ולעדכן'+(dl&&dl.days>=0?' עד <span class="ltr">'+dl.label+'</span>':' בכל שלב')+'. מה שלא יודעים עדיין, משאירים ריק.</p>'+
+    (S.demo?'<div class="banner soft">זה אירוע לדוגמה. השינויים לא נשמרים.</div>':'')+
+    '<div class="actions"><button class="btn accent" data-act="welcome">מתחילים</button></div></div>';
+    return;
+  }
   const names=admin?STEPS.concat(['ניהול']):STEPS;
   let h='<div class="wrap">';
   if(admin){
@@ -815,6 +828,7 @@ app.addEventListener('click',async e=>{
     case 'back':await flush();S.view='list';try{await loadAdmin()}catch(_){ }render();break;
     case 'settings':S.view='settings';render();break;
     case 'copylink':await copy(clientLink(ev.token));toast('הקישור הועתק');break;
+    case 'welcome':S.welcomed=true;ls.set('wl_'+S.token,'1');render();scrollTo(0,0);break;
     case 'copyprofile':await copy(profLink(S.dj.slug));toast('הקישור לדף הביקורות הועתק');break;
     case 'revpub':{const on=b.checked;try{await rpc('dj_review_public',{p_key:S.key,p_id:ev.id,p_public:on});ev.review_public=on;toast(on?'הביקורת מוצגת בדף':'הביקורת הוסרה מהדף')}catch(_){b.checked=!on;toast('השמירה נכשלה. נסו שוב')}break}
     case 'copyadmin':await copy(location.origin+BASE+'#k='+S.key);toast('קישור הניהול הועתק');break;
