@@ -541,7 +541,7 @@ function renderLanding(){
   '<button class="btn accent" data-act="join">שלחו לי קישור</button>'+
   '<p class="hint">הפרטים משמשים רק ליצירת קשר לגבי השירות. <a href="privacy.html">מדיניות פרטיות</a></p>')+
   '</section>'+
-  '<p class="lfoot" id="login">כבר יש לכם חשבון? נכנסים דרך קישור הניהול האישי שקיבלתם בוואטסאפ. כדאי לשמור אותו במסך הבית של הטלפון. זוג שקיבל קישור מה-DJ נכנס דרכו. <a href="privacy.html">פרטיות ותנאים</a></p></div>';
+  '<p class="lfoot" id="login">כבר יש לכם חשבון? נכנסים דרך קישור הניהול האישי שקיבלתם בוואטסאפ. כדאי לשמור אותו במסך הבית של הטלפון. זוג שקיבל קישור מה-DJ נכנס דרכו. <a href="privacy.html">פרטיות ותנאים</a></p><p class="lfoot">יצירת קשר: <a href="mailto:sagarnu.irua@gmail.com" dir="ltr">sagarnu.irua@gmail.com</a> , <a href="https://instagram.com/sagarnu.irua" target="_blank" rel="noopener" dir="ltr">@sagarnu.irua</a></p></div>';
 }
 
 function status(e){
@@ -658,7 +658,7 @@ function renderEditor(){
   if(S.step===3){
     h+='<h2>ציר זמן</h2><p class="sub">סדר הערב. אתם וה-DJ עורכים אותו יחד, ואפשר לשנות עד קרוב לאירוע.</p>'+
     (d.timeline.length?'':'<div class="banner soft">עדיין אין ציר זמן. '+(d.start?'אפשר להתחיל מהצעה מוכנה לפי שעת ההתחלה, ולתקן אותה.':'מלאו שעת התחלה בשלב הראשון כדי לקבל הצעה מוכנה, או הוסיפו שורות לבד.')+'</div>')+
-    '<ol class="tl">'+d.timeline.map((r,i)=>'<li><input type="time" aria-label="שעה" data-tl="'+i+'" data-f="time" value="'+esc(r.time||'')+'"'+dis+'><div><input type="text" class="ti" dir="auto" aria-label="מה קורה" data-tl="'+i+'" data-f="title" value="'+esc(r.title||'')+'" placeholder="מה קורה?"'+dis+'><input type="text" class="no" dir="auto" aria-label="הערה" data-tl="'+i+'" data-f="note" value="'+esc(r.note||'')+'" placeholder="הערה ל-DJ"'+dis+'></div>'+(ro?'<span></span>':'<button class="x" data-act="tldel" data-i="'+i+'" aria-label="מחיקת השורה">×</button>')+'</li>').join('')+'</ol>'+
+    '<ol class="tl">'+d.timeline.map((r,i)=>'<li><input type="time" aria-label="שעה" data-tl="'+i+'" data-f="time" value="'+esc(r.time||'')+'"'+dis+'><div><input type="text" class="ti" dir="auto" aria-label="מה קורה" data-tl="'+i+'" data-f="title" value="'+esc(r.title||'')+'" placeholder="מה קורה?"'+dis+'><input type="text" class="no" dir="auto" aria-label="הערה" data-tl="'+i+'" data-f="note" value="'+esc(r.note||'')+'" placeholder="הערה לדיג'יי"'+dis+'></div>'+(ro?'<span></span>':'<button class="x" data-act="tldel" data-i="'+i+'" aria-label="מחיקת השורה">×</button>')+'</li>').join('')+'</ol>'+
     (ro?'':'<div class="tlactions"><button class="btn sm" data-act="tladd">הוספת שורה</button>'+(d.start?'<button class="btn sm ghost" data-act="tlplan">'+(d.timeline.length?'החלפה בציר מוצע':'ציר מוצע')+'</button>':'')+(d.timeline.length>1?'<button class="btn sm ghost" data-act="tlsort">סידור לפי שעה</button>':'')+'</div>');
   }
   if(S.step===4){
