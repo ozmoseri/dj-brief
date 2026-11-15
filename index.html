@@ -220,6 +220,18 @@ input[type=color]{width:64px;height:50px;border:1.5px solid var(--line);border-r
 .menu nav a:hover,.menu nav button:hover{background:var(--paper)}
 .lnav{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 0}.lnav .wordmark{font-size:30px}.lnav .mark{height:30px}
 .land .lsec h2{margin-top:6px}.land section{scroll-margin-top:76px}
+.hastabs{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+.tabs{position:fixed;inset-inline:0;bottom:0;z-index:40;display:flex;justify-content:center;background:var(--card);border-top:1.5px solid var(--line);padding:0 8px env(safe-area-inset-bottom)}
+.tabs a,.tabs button{flex:1 1 0;max-width:200px;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:none;color:var(--muted);text-decoration:none;font-family:var(--body);font-size:13px;font-weight:500;position:relative}
+.tabs svg{width:24px;height:24px;fill:currentColor}
+.tabs .on{color:var(--ink);font-weight:600}.tabs .on::before{content:'';position:absolute;top:-1.5px;inset-inline:26%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+h1.pg{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;margin:12px 0 8px}
+.djl{display:flex;flex-direction:column;gap:12px;margin:0 0 24px}
+.djc{display:flex;gap:14px;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;color:var(--ink);text-decoration:none;min-height:76px}
+.djc .av{flex:0 0 56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--display);font-size:34px;overflow:hidden}.djc .av img{width:100%;height:100%;object-fit:cover}
+.djc .tx{display:flex;flex-direction:column;min-width:0}.djc strong{font-size:19px}.djc .tx>span{color:var(--muted);font-size:15px}.djc small{color:var(--muted);font-size:14px;margin-top:2px}.djc small b{color:var(--ink)}
+.hero .tag{color:var(--muted);margin:10px 0 0}
+@media print{.tabs{display:none}}
 </style>
 </head>
 <body>
@@ -411,6 +423,12 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register(BASE+'sw.js').
 /* ---------- boot ---------- */
 async function boot(){
   const m=/^\/(e|r)\/([A-Za-z0-9]{16,64})\/?$/.exec(location.pathname)||/[?&](e|r)=([A-Za-z0-9]{16,64})(?:&|$)/.exec(location.search);
+  if(/[?&]x(?:&|=|$)/.test(location.search)&&!m){
+    S.mode='discover';S.sample=/[?&]demo(?:&|=|$)/.test(location.search);document.title='DJs וביקורות | סגרנו אירוע';
+    if(S.sample){S.dir=SAMPLE_DIR;render();return}
+    try{S.dir=await rpc('directory',{})}catch(e){S.dir={djs:[],feed:[]}}
+    render();return;
+  }
   const pm=/[?&]d=([A-Za-z0-9_-]{6,40})(?:&|$)/.exec(location.search);
   if(pm&&!m){
     S.mode='profile';
@@ -457,20 +475,43 @@ async function loadAdmin(){
 /* ---------- render ---------- */
 function render(){
   clearInterval(boothTimer);
-  if(S.mode==='landing') return renderLanding();
+  if(S.mode==='landing'){renderLanding();return tabs('home')}
   if(S.mode==='review') return renderReview();
-  if(S.mode==='profile') return renderProfile();
+  if(S.mode==='profile'){renderProfile();return tabs('djs')}
+  if(S.mode==='discover'){renderDiscover();return tabs('djs')}
   if(S.mode==='client') return renderEditor();
   if(S.view==='booth') return renderBooth();
   if(S.view==='event') return renderEditor();
-  if(S.view==='settings') return renderSettings();
-  renderList();
+  if(S.view==='settings'){renderSettings();return tabs('settings')}
+  renderList();tabs('events');
+}
+const IC={home:'<path d="M4 11.5 12 4l8 7.5V20h-5.5v-5.5h-5V20H4z"/>',djs:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.9z"/>',join:'<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',events:'<path d="M5 6.5h14V20H5zM5 10.5h14M9 4v4M15 4v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',me:'<path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7.5 8a7.5 7.5 0 0115 0z"/>',settings:'<path d="M5 7h9M18 7h1M5 12h2M11 12h8M5 17h9M18 17h1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="16" cy="17" r="2"/>'};
+function tabs(on){
+  const home=location.origin+BASE,adm=S.mode==='admin',has=!!ls.get('djkey');
+  const it=adm?[['events','אירועים','back',1],['me','הדף שלי',S.dj&&S.dj.slug?profLink(S.dj.slug):home,0],['settings','הגדרות','settings',1]]
+    :[['home','בית',home+'?l',0],['djs','DJs',home+'?x',0],has?['events','הניהול שלי',home,0]:['join','הצטרפות',home+'?l#join',0]];
+  const w=app.querySelector('.wrap');w&&w.classList.add('hastabs');
+  app.insertAdjacentHTML('beforeend','<nav class="tabs" aria-label="ניווט ראשי">'+it.map(i=>{const c=' class="'+(i[0]===on?'on':'')+'"'+(i[0]===on?' aria-current="page"':''),inner='<svg viewBox="0 0 24 24" aria-hidden="true">'+IC[i[0]]+'</svg><span>'+i[1]+'</span>';return i[3]?'<button data-act="'+i[2]+'"'+c+'>'+inner+'</button>':'<a href="'+i[2]+'"'+c+'>'+inner+'</a>'}).join('')+'</nav>');
+}
+const SAMPLE_DIR={djs:[{slug:'',brand_name:'DJ לדוגמה',tagline:'חתונות עם רחבה מלאה מהשיר הראשון',area:'מרכז',count:14,avg:4.9,accent:'#FF3D6E'},{slug:'',brand_name:'DJ לדוגמה 2',tagline:'בר מצוות, ימי הולדת ואירועי חברה',area:'השרון',count:8,avg:4.8,accent:'#3D7BFF'},{slug:'',brand_name:'DJ לדוגמה 3',tagline:'מזרחית, פופ ישראלי ולהיטים מכל הזמנים',area:'דרום',count:5,avg:4.6,accent:'#12A150'}],
+ feed:[{stars:5,text:'הרחבה הייתה מלאה מהשיר הראשון ועד האחרון.',name:'שם הלקוח',type:'חתונה',at:'2026-10-20',brand_name:'DJ לדוגמה',slug:''},{stars:5,text:'מילאנו את הטופס בחמש דקות והוא הגיע מוכן לגמרי.',name:'שם הלקוח',type:'בר / בת מצווה',at:'2026-09-12',brand_name:'DJ לדוגמה 2',slug:''},{stars:4,text:'מקצועי, קשוב ונעים. הקפיד על רשימת ה"לא לנגן" שלנו.',name:'שם הלקוח',type:'יום הולדת',at:'2026-08-03',brand_name:'DJ לדוגמה 3',slug:''}]};
+function renderDiscover(){
+  const D=S.dir,sm=S.sample,home=location.origin+BASE;
+  const dt=a=>{const d=new Date(a);return isNaN(d)?'':('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear()};
+  const card=d=>{const inner='<span class="av" style="background:'+esc(d.accent||'#FF3D6E')+'">'+(d.logo?'<img alt="" src="'+esc(d.logo)+'">':esc((d.brand_name||'DJ').replace(/^DJ\s*/i,'').slice(0,1)||'D'))+'</span><span class="tx"><strong dir="auto">'+esc(d.brand_name||'DJ')+'</strong>'+(d.tagline?'<span dir="auto">'+esc(d.tagline)+'</span>':'')+'<small>'+(d.count?'<b class="ltr">★ '+Number(d.avg).toFixed(1)+'</b> , '+(d.count===1?'ביקורת אחת':d.count+' ביקורות'):'חדש כאן')+(d.area?' , '+esc(d.area):'')+'</small></span>';
+    return d.slug?'<a class="djc" href="'+profLink(d.slug)+'">'+inner+'</a>':'<div class="djc">'+inner+'</div>'};
+  app.innerHTML='<div class="wrap"><div class="top lnav">'+brandHTML({brand_name:'סגרנו אירוע'})+'</div>'+
+  (sm?'<div class="banner soft">תצוגה לדוגמה. ה-DJs והביקורות כאן הם טקסט להמחשה ולא אמיתיים.</div>':'')+
+  '<h1 class="pg">DJs וביקורות</h1><p class="sub">פרופילים של DJs לאירועים, עם ביקורות שלקוחות כתבו אחרי האירוע.</p>'+
+  (D.djs.length?'<div class="djl">'+D.djs.map(card).join('')+'</div>':'<div class="revbox"><strong>ה-DJs הראשונים מצטרפים עכשיו</strong><p>הפרופילים יופיעו כאן בקרוב. בינתיים אפשר לראות איך זה ייראה.</p><div class="actions"><a class="btn ghost" href="'+home+'?x&demo">תצוגה לדוגמה</a><a class="btn accent" href="'+home+'?l#join">אני DJ, רוצה פרופיל</a></div></div>')+
+  (D.feed.length?'<h2>ביקורות אחרונות</h2>'+D.feed.map(r=>'<div class="revbox"><div class="s" aria-label="'+r.stars+' מתוך 5">'+'★'.repeat(r.stars)+'</div><p dir="auto">'+esc(r.text)+'</p><small dir="auto">'+esc([r.name,r.type,dt(r.at)].filter(Boolean).join(' , '))+' , על '+(r.slug?'<a href="'+profLink(r.slug)+'">'+esc(r.brand_name)+'</a>':esc(r.brand_name))+'</small></div>').join(''):'')+
+  '<p class="lfoot">DJ? <a href="'+home+'?l">פותחים פרופיל ואוספים ביקורות עם סגרנו אירוע</a></p></div>';
 }
 function renderLanding(){
   document.title='סגרנו אירוע - כל פרטי האירוע בקישור אחד';
   const li=(t,d)=>'<div class="lf"><h3>'+t+'</h3><p>'+d+'</p></div>';
   const home=location.origin+BASE;
-  app.innerHTML='<div class="wrap land"><div class="top lnav">'+brandHTML({brand_name:'סגרנו אירוע'})+menuHTML([['איך זה עובד','#how'],['מה מקבלים','#features'],['מחיר','#price'],['דוגמה: מה הזוג רואה','?e=aaff67b3c09f4b5eac4b'],['דוגמה: דף ביקורות של DJ','?d=djlielmalka&demo'],['הצטרפות','#join'],[ls.get('djkey')?'למסך הניהול שלי':'כניסת DJ',ls.get('djkey')?home:'#login']])+'</div><div class="hero">'+
+  app.innerHTML='<div class="wrap land"><div class="top lnav">'+brandHTML({brand_name:'סגרנו אירוע'})+'</div><div class="hero">'+
   (S.badKey?'<p class="warn">קישור הניהול לא תקין. פתחו את הקישור האישי שקיבלתם.</p>':'')+
   '<h1>פחות וואטסאפ. יותר רחבה.</h1><p>שולחים לזוג קישור אחד. הם ממלאים לבד את כל פרטי האירוע והשירים, ואתם מגיעים עם לו"ז מסודר שרץ מולכם על המחשב.</p>'+
   '<div class="lcta"><a class="btn accent" href="#join">אני רוצה מקום</a><a class="btn ghost" href="?e=aaff67b3c09f4b5eac4b">לראות מה הזוג מקבל</a></div></div>'+
@@ -513,7 +554,7 @@ function renderList(){
     '<span><span class="n" dir="auto">'+esc(d.names||'אירוע ללא שם')+'</span><span class="m">'+esc([d.type,d.venue].filter(Boolean).join(', '))+'</span></span>'+
     '<span class="st '+st[0]+'">'+st[1]+'</span></button>';
   };
-  app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+menuHTML([['האירועים שלי','back',1],['אירוע חדש','new',1],['הדף האישי והביקורות',S.dj.slug?profLink(S.dj.slug):'#',0,1],['הגדרות המותג','settings',1],['איך זה עובד','howon',1],['האתר של סגרנו אירוע',location.origin+BASE+'?l',0,1]])+'</div>'+
+  app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+'</div>'+
   (S.offline?'<div class="banner soft">אין חיבור כרגע. מוצגים הנתונים מהסנכרון האחרון ('+clock(S.syncedAt)+').</div>':'')+
   '<div class="headrow"><h2>האירועים שלי</h2><button class="btn accent" data-act="new">אירוע חדש</button></div>'+
   (ls.get('howto_off')?'':'<div class="how"><div class="headrow"><h3>איך זה עובד</h3><button class="btn quiet" data-act="howoff">הבנתי, להסתיר</button></div><div class="wl">'+
@@ -538,6 +579,12 @@ function renderSettings(){
   '<div class="field"><label for="s_logo">לוגו</label>'+(d.logo?'<div style="margin-bottom:10px">'+brandHTML(d)+'</div>':'<div class="hint" style="margin:0 0 10px">בלי קובץ לוגו מוצג סימן שנבנה משם המותג:</div><div style="margin-bottom:10px">'+brandHTML(d)+'</div>')+
   '<input type="file" id="s_logo" accept="image/*">'+(d.logo?' <button class="btn quiet" data-act="rmlogo">הסרת הלוגו</button>':'')+'</div>'+
   '<div class="actions"><button class="btn accent" data-act="savesettings">שמירת הגדרות</button></div>'+
+  '<h2>הדף האישי שלי</h2><p class="sub">מה שמתעניינים רואים בדף הציבורי שלך, לצד הביקורות.</p>'+
+  '<div class="field"><label for="p_tag">משפט אחד עליך</label><input type="text" id="p_tag" dir="auto" maxlength="120" value="'+esc(d.tagline||'')+'"><div class="hint">למשל: חתונות ובר מצוות, מזרחית ולהיטים.</div></div>'+
+  '<div class="field"><label for="p_area">אזור פעילות</label><input type="text" id="p_area" dir="auto" maxlength="60" value="'+esc(d.area||'')+'"></div>'+
+  '<div class="field"><label for="p_ig">אינסטגרם</label><input type="text" id="p_ig" dir="ltr" maxlength="60" value="'+esc(d.instagram||'')+'"><div class="hint">שם המשתמש, בלי @.</div></div>'+
+  '<label class="sw"><input type="checkbox" id="p_listed"'+(d.listed?' checked':'')+'><span>להופיע בעמוד ה-DJs הציבורי של סגרנו אירוע</span></label>'+
+  '<div class="actions"><button class="btn accent" data-act="savepublic">שמירת הדף האישי</button>'+(d.slug?'<a class="btn ghost" target="_blank" rel="noopener" href="'+profLink(d.slug)+'">צפייה בדף</a>':'')+'</div>'+
   '<h3>קישור הניהול שלך</h3><p class="sub">הקישור הזה הוא המפתח לכל האירועים. אל תשתפו אותו עם לקוחות. כדאי לשמור אותו במועדפים או להוסיף למסך הבית.</p><div class="actions"><button class="btn ghost" data-act="copyadmin">העתקת קישור הניהול</button><button class="btn danger" data-act="rotate">החלפת הקישור</button></div><p class="sub">אם הקישור הגיע למישהו אחר, החלפה מבטלת אותו ויוצרת חדש.</p><p class="sub"><button class="btn quiet" data-act="howon">להציג שוב את "איך זה עובד"</button></p></div>';
 }
 
@@ -675,9 +722,9 @@ const profLink=slug=>location.origin+BASE+'?d='+slug;
 function renderProfile(){
   const rs=S.reviews,b=S.brand,n=rs.length,avg=n?rs.reduce((a,r)=>a+r.stars,0)/n:0;
   const dt=a=>{const d=new Date(a);return isNaN(d)?'':('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear()};
-  app.innerHTML='<div class="wrap">'+(S.sample?'<div class="banner soft" style="margin-top:16px">תצוגה לדוגמה. הביקורות כאן הן טקסט להמחשה ולא של לקוחות אמיתיים.</div>':'')+'<div class="hero">'+brandHTML(b)+'<h1>מה אומרים הלקוחות</h1>'+
+  app.innerHTML='<div class="wrap">'+(S.sample?'<div class="banner soft" style="margin-top:16px">תצוגה לדוגמה. הביקורות כאן הן טקסט להמחשה ולא של לקוחות אמיתיים.</div>':'')+'<div class="hero">'+brandHTML(b)+(b.tagline?'<p class="tag" dir="auto">'+esc(b.tagline)+(b.area?' , '+esc(b.area):'')+'</p>':(b.area?'<p class="tag">'+esc(b.area)+'</p>':''))+'<h1>מה אומרים הלקוחות</h1>'+
   (n?'<div class="pavg"><b class="ltr">'+avg.toFixed(1)+'</b><span class="s" aria-hidden="true">'+'★'.repeat(Math.round(avg))+'</span><small>'+(n===1?'ביקורת אחת':n+' ביקורות')+(S.sample?' לדוגמה':' מלקוחות אחרי האירוע')+'</small></div>':'<p>עדיין אין כאן ביקורות. הן יופיעו אחרי האירועים הקרובים.</p>')+
-  (b.phone?'<div class="lcta"><a class="btn accent" target="_blank" rel="noopener" href="https://wa.me/'+waPhone(b.phone)+'?text='+encodeURIComponent('היי, ראיתי את הביקורות ורציתי לבדוק תאריך לאירוע')+'">לבדוק תאריך בוואטסאפ</a></div>':'')+'</div>'+
+  (b.phone?'<div class="lcta"><a class="btn accent" target="_blank" rel="noopener" href="https://wa.me/'+waPhone(b.phone)+'?text='+encodeURIComponent('היי, ראיתי את הביקורות ורציתי לבדוק תאריך לאירוע')+'">לבדוק תאריך בוואטסאפ</a>'+(b.instagram?'<a class="btn ghost" target="_blank" rel="noopener" href="https://instagram.com/'+esc(b.instagram)+'">אינסטגרם</a>':'')+'</div>':(b.instagram?'<div class="lcta"><a class="btn ghost" target="_blank" rel="noopener" href="https://instagram.com/'+esc(b.instagram)+'">אינסטגרם</a></div>':''))+'</div>'+
   rs.map(r=>'<div class="revbox"><div class="s" aria-label="'+r.stars+' מתוך 5">'+'★'.repeat(r.stars)+'</div>'+(r.text?'<p dir="auto">'+esc(r.text)+'</p>':'')+'<small dir="auto">'+esc([r.name,r.type,dt(r.at)].filter(Boolean).join(' , '))+'</small></div>').join('')+
   '<p class="lfoot">'+(S.sample?'בדף האמיתי יופיעו רק ביקורות שלקוחות כתבו דרך הקישור האישי שקיבלו אחרי האירוע.':'הביקורות נכתבו על ידי לקוחות דרך קישור אישי שקיבלו אחרי האירוע.')+'</p><p class="lfoot">DJ? <a href="'+location.origin+BASE+'?l">גם לכם יכול להיות דף כזה, עם סגרנו אירוע</a></p></div>';
 }
@@ -867,6 +914,11 @@ app.addEventListener('click',async e=>{
     case 'del':if(confirm('למחוק את האירוע? אפשר לשחזר אותו במשך 30 יום מרשימת האירועים.')){try{await rpc('dj_delete_event',{p_key:S.key,p_id:ev.id});dirty=false;S.ev=null;S.view='list';try{await loadAdmin()}catch(_){ }render();toast('האירוע נמחק. אפשר לשחזר מרשימת האירועים')}catch(_){toast('המחיקה נכשלה. נסו שוב')}}break;
     case 'restore':b.disabled=true;try{await rpc('dj_restore_event',{p_key:S.key,p_id:b.dataset.id});await loadAdmin();render();toast('האירוע שוחזר')}catch(_){b.disabled=false;toast('השחזור נכשל. נסו שוב')}break;
     case 'rmlogo':S.dj.logo=null;render();toast('לחצו על שמירת הגדרות כדי לסיים');break;
+    case 'savepublic':{
+      const t=$('#p_tag').value.trim(),ar=$('#p_area').value.trim(),ig=$('#p_ig').value.trim(),li=$('#p_listed').checked;b.disabled=true;
+      try{const r=await rpc('dj_update_public',{p_key:S.key,p_tagline:t,p_area:ar,p_instagram:ig,p_listed:li});Object.assign(S.dj,{tagline:t,area:ar,instagram:r.instagram||'',listed:li});render();toast('הדף האישי נשמר')}
+      catch(err){b.disabled=false;toast(/instagram/.test(err.message)?'שם המשתמש באינסטגרם לא תקין':'השמירה נכשלה. נסו שוב')}
+      break}
     case 'savesettings':{
       const nb=$('#s_brand').value.trim(),np=$('#s_phone').value.trim(),na=$('#s_accent').value;
       try{await rpc('dj_update_profile',{p_key:S.key,p_brand:nb,p_logo:S.dj.logo||null,p_accent:na,p_phone:np});S.dj.brand_name=nb;S.dj.phone=np;S.dj.accent=na;setAccent(na);render();toast('ההגדרות נשמרו')}catch(_){toast('השמירה נכשלה. נסו לוגו קטן יותר')}
