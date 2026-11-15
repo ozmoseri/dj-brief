@@ -110,8 +110,10 @@ input:disabled,textarea:disabled{background:transparent;color:var(--ink);opacity
 
 /* timeline: the run sheet */
 .tl{position:relative;margin:14px 0 0;padding:0;list-style:none}
-.tl li{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
-.tl input[type=time]{font-family:var(--display);font-weight:700;font-size:34px;line-height:1;padding:4px 8px;min-height:50px;border-color:transparent;background:transparent;direction:ltr;text-align:center}
+.tl li{display:grid;grid-template-columns:118px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.tl input[type=time]{font-family:var(--display);font-weight:700;font-size:30px;line-height:1;padding:4px 2px;min-height:50px;width:100%;min-width:0;border-color:transparent;background:transparent;direction:ltr;text-align:center}
+.tl input[type=time]::-webkit-calendar-picker-indicator{display:none}
+@media (max-width:420px){.tl li{grid-template-columns:96px 1fr auto;gap:8px}.tl input[type=time]{font-size:26px}}
 .tl input[type=time]:focus,.tl input[type=time]:hover{border-color:var(--line);background:var(--card)}
 .tl .ti{font-weight:600}
 .tl .no{font-size:15px;min-height:42px;padding:8px 12px;margin-top:6px}
@@ -232,6 +234,9 @@ h1.pg{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;ma
 .djc .tx{display:flex;flex-direction:column;min-width:0}.djc strong{font-size:19px}.djc .tx>span{color:var(--muted);font-size:15px}.djc small{color:var(--muted);font-size:14px;margin-top:2px}.djc small b{color:var(--ink)}
 .hero .tag{color:var(--muted);margin:10px 0 0}
 @media print{.tabs{display:none}}
+.recap{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 18px;margin:0 0 14px}.recap .rh{display:flex;justify-content:space-between;align-items:center;gap:10px}.recap h3{margin:0}.recap h4{margin:12px 0 4px;font-size:16px}
+.recap dl{margin:8px 0 0}.recap dl div{display:flex;gap:12px;padding:6px 0;border-top:1px solid var(--line)}.recap dt{flex:0 0 96px;color:var(--muted)}.recap dd{margin:0;font-weight:500}
+.recap ul{margin:4px 0 0;padding:0;list-style:none}.recap li{padding:5px 0;border-top:1px solid var(--line)}.recap small{color:var(--muted)}.recap .none{color:var(--muted);margin:4px 0 0}.recap p{margin:6px 0 0}
 </style>
 </head>
 <body>
@@ -432,7 +437,7 @@ async function boot(){
   const pm=/[?&]d=([A-Za-z0-9_-]{6,40})(?:&|$)/.exec(location.search);
   if(pm&&!m){
     S.mode='profile';
-    try{const r=await rpc('dj_public',{p_slug:pm[1]});S.brand=r.brand;S.reviews=r.reviews||[];S.sample=/[?&]demo(?:&|=|$)/.test(location.search);if(S.sample)S.reviews=[{stars:5,text:'הרחבה הייתה מלאה מהשיר הראשון ועד האחרון. כל מה שביקשנו התנגן בדיוק ברגע הנכון.',name:'שם הלקוח',type:'חתונה',at:'2026-10-20'},{stars:5,text:'מילאנו את הטופס בחמש דקות והוא הגיע מוכן לגמרי. אפס כאב ראש.',name:'שם הלקוח',type:'בר / בת מצווה',at:'2026-09-12'},{stars:4,text:'מקצועי, קשוב ונעים. הקפיד על רשימת ה"לא לנגן" שלנו.',name:'שם הלקוח',type:'יום הולדת',at:'2026-08-03'}];setAccent(r.brand.accent);document.title=(r.brand.brand_name||'DJ')+' | ביקורות';render()}
+    try{const sn=pm[1]==='sample'&&SAMPLE_DIR.djs.find(x=>x.brand_name===new URLSearchParams(location.search).get('n'))||null;const r=pm[1]==='sample'?{brand:{brand_name:(sn||SAMPLE_DIR.djs[0]).brand_name,accent:(sn||SAMPLE_DIR.djs[0]).accent,tagline:(sn||SAMPLE_DIR.djs[0]).tagline,area:(sn||SAMPLE_DIR.djs[0]).area},reviews:[]}:await rpc('dj_public',{p_slug:pm[1]});S.brand=r.brand;S.reviews=r.reviews||[];S.sample=/[?&]demo(?:&|=|$)/.test(location.search);if(S.sample)S.reviews=[{stars:5,text:'הרחבה הייתה מלאה מהשיר הראשון ועד האחרון. כל מה שביקשנו התנגן בדיוק ברגע הנכון.',name:'שם הלקוח',type:'חתונה',at:'2026-10-20'},{stars:5,text:'מילאנו את הטופס בחמש דקות והוא הגיע מוכן לגמרי. אפס כאב ראש.',name:'שם הלקוח',type:'בר / בת מצווה',at:'2026-09-12'},{stars:4,text:'מקצועי, קשוב ונעים. הקפיד על רשימת ה"לא לנגן" שלנו.',name:'שם הלקוח',type:'יום הולדת',at:'2026-08-03'}];setAccent(r.brand.accent);document.title=(r.brand.brand_name||'DJ')+' | ביקורות';render()}
     catch(e){app.innerHTML='<div class="wrap"><div class="hero"><h1>הדף לא נמצא</h1><p>ייתכן שהקישור הועתק חלקית.</p></div></div>'}
     return;
   }
@@ -489,7 +494,9 @@ const IC={home:'<path d="M4 11.5 12 4l8 7.5V20h-5.5v-5.5h-5V20H4z"/>',djs:'<path
 function tabs(on){
   const home=location.origin+BASE,adm=S.mode==='admin',has=!!ls.get('djkey');
   const it=adm?[['events','אירועים','back',1],['me','הדף שלי',S.dj&&S.dj.slug?profLink(S.dj.slug):home,0],['settings','הגדרות','settings',1]]
-    :[['home','בית',home+'?l',0],['djs','DJs',home+'?x',0],has?['events','הניהול שלי',home,0]:['join','הצטרפות',home+'?l#join',0]];
+    :[['home','בית',home+'?l',0],['djs','DJs',home+'?x'+(S.sample?'&demo':''),0],has?['events','הניהול שלי',home,0]:['join','הצטרפות',home+'?l#join',0]];
+  if(on==='home'&&location.hash==='#join'&&!has) on='join';
+  const old=app.querySelector('.tabs');old&&old.remove();
   const w=app.querySelector('.wrap');w&&w.classList.add('hastabs');
   app.insertAdjacentHTML('beforeend','<nav class="tabs" aria-label="ניווט ראשי">'+it.map(i=>{const c=' class="'+(i[0]===on?'on':'')+'"'+(i[0]===on?' aria-current="page"':''),inner='<svg viewBox="0 0 24 24" aria-hidden="true">'+IC[i[0]]+'</svg><span>'+i[1]+'</span>';return i[3]?'<button data-act="'+i[2]+'"'+c+'>'+inner+'</button>':'<a href="'+i[2]+'"'+c+'>'+inner+'</a>'}).join('')+'</nav>');
 }
@@ -499,7 +506,7 @@ function renderDiscover(){
   const D=S.dir,sm=S.sample,home=location.origin+BASE;
   const dt=a=>{const d=new Date(a);return isNaN(d)?'':('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear()};
   const card=d=>{const inner='<span class="av" style="background:'+esc(d.accent||'#FF3D6E')+'">'+(d.logo?'<img alt="" src="'+esc(d.logo)+'">':esc((d.brand_name||'DJ').replace(/^DJ\s*/i,'').slice(0,1)||'D'))+'</span><span class="tx"><strong dir="auto">'+esc(d.brand_name||'DJ')+'</strong>'+(d.tagline?'<span dir="auto">'+esc(d.tagline)+'</span>':'')+'<small>'+(d.count?'<b class="ltr">★ '+Number(d.avg).toFixed(1)+'</b> , '+(d.count===1?'ביקורת אחת':d.count+' ביקורות'):'חדש כאן')+(d.area?' , '+esc(d.area):'')+'</small></span>';
-    return d.slug?'<a class="djc" href="'+profLink(d.slug)+'">'+inner+'</a>':'<div class="djc">'+inner+'</div>'};
+    return d.slug?'<a class="djc" href="'+profLink(d.slug)+'">'+inner+'</a>':'<a class="djc" href="'+home+'?d=sample&demo&n='+encodeURIComponent(d.brand_name)+'">'+inner+'</a>'};
   app.innerHTML='<div class="wrap"><div class="top lnav">'+brandHTML({brand_name:'סגרנו אירוע'})+'</div>'+
   (sm?'<div class="banner soft">תצוגה לדוגמה. ה-DJs והביקורות כאן הם טקסט להמחשה ולא אמיתיים.</div>':'')+
   '<h1 class="pg">DJs וביקורות</h1><p class="sub">פרופילים של DJs לאירועים, עם ביקורות שלקוחות כתבו אחרי האירוע.</p>'+
@@ -655,7 +662,16 @@ function renderEditor(){
     (ro?'':'<div class="tlactions"><button class="btn sm" data-act="tladd">הוספת שורה</button>'+(d.start?'<button class="btn sm ghost" data-act="tlplan">'+(d.timeline.length?'החלפה בציר מוצע':'ציר מוצע')+'</button>':'')+(d.timeline.length>1?'<button class="btn sm ghost" data-act="tlsort">סידור לפי שעה</button>':'')+'</div>');
   }
   if(S.step===4){
-    h+='<h2>סיכום</h2><p class="sub">משהו נוסף שחשוב שנדע?</p>'+
+    const sl=a=>a.length?'<ul>'+a.map(x=>'<li><span dir="auto">'+esc(x.t)+'</span>'+(x.a?' <small dir="auto">'+esc(x.a)+'</small>':'')+'</li>').join('')+'</ul>':'<p class="none">לא מולא</p>';
+    const mo=Object.entries(d.moments||{}).filter(([k,v])=>v&&(v.t||typeof v==='string'));
+    const row=(k,v)=>'<div><dt>'+k+'</dt><dd dir="auto">'+(v?esc(v):'<span class="none">לא מולא</span>')+'</dd></div>';
+    h+='<h2>סיכום</h2><p class="sub">ככה זה ייראה אצל ה-DJ. לתיקון, לוחצים על "עריכה" ליד כל חלק.</p>'+
+    '<div class="recap"><div class="rh"><h3>האירוע</h3><button class="btn quiet" data-act="step" data-i="0">עריכה</button></div><dl>'+row('שמות',d.names)+row('סוג',d.type)+row('תאריך',fmtDate(d.date))+row('שעת התחלה',d.start)+row('מקום',d.venue)+'</dl></div>'+
+    '<div class="recap"><div class="rh"><h3>סגנון</h3><button class="btn quiet" data-act="step" data-i="1">עריכה</button></div>'+(d.genres.length?'<p dir="auto">'+esc(d.genres.join(', '))+'</p>':'<p class="none">לא מולא</p>')+'</div>'+
+    '<div class="recap"><div class="rh"><h3>שירים</h3><button class="btn quiet" data-act="step" data-i="2">עריכה</button></div><h4>חובה לנגן ('+d.must.length+')</h4>'+sl(d.must)+'<h4>נחמד שיהיה ('+d.nice.length+')</h4>'+sl(d.nice)+'<h4>לא לנגן ('+d.no.length+')</h4>'+sl(d.no)+
+    (mo.length?'<h4>שירים לרגעים מיוחדים</h4><ul>'+mo.map(([k,v])=>'<li><span dir="auto">'+esc(k)+': '+esc(typeof v==='string'?v:v.t+(v.a?' , '+v.a:''))+'</span></li>').join('')+'</ul>':'')+'</div>'+
+    '<div class="recap"><div class="rh"><h3>ציר זמן</h3><button class="btn quiet" data-act="step" data-i="3">עריכה</button></div>'+(d.timeline.length?'<ul>'+d.timeline.map(r=>'<li><b class="ltr">'+esc(r.time||'--:--')+'</b> <span dir="auto">'+esc(r.title||'')+'</span></li>').join('')+'</ul>':'<p class="none">לא מולא</p>')+'</div>'+
+    '<h3>משהו נוסף שחשוב שנדע?</h3>'+
     '<div class="field"><label for="f_notes">הערות ובקשות מיוחדות</label><textarea id="f_notes" data-k="notes" dir="auto" placeholder="הפתעות, ברכות, אורחים מיוחדים, מגבלות של המקום"'+dis+'>'+esc(d.notes||'')+'</textarea></div>';
     const miss=[];if(!d.names)miss.push('שם');if(!d.date)miss.push('תאריך');if(!d.start)miss.push('שעת התחלה');if(!d.venue)miss.push('מקום');
     if(miss.length&&!ro) h+='<div class="banner soft">עדיין חסר: '+miss.join(', ')+'. אפשר להשלים עכשיו או לחזור מאוחר יותר.</div>';
@@ -849,6 +865,8 @@ function readLogo(file){
   img.src=url;
 }
 app.addEventListener('click',e=>{const m=e.target.closest('.menu nav a,.menu nav button');if(m){const d=m.closest('details');d&&d.removeAttribute('open')}},true);
+addEventListener('hashchange',()=>{if(S.mode==='landing')tabs('home')});
+app.addEventListener('click',e=>{const v=e.target.closest('video.lvid');if(v&&!v.dataset.started){v.dataset.started='1';if(v.paused)v.play().catch(()=>{})}},true);
 app.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b) return;
   const a=b.dataset.act,ev=S.ev,d=ev&&ev.data;
