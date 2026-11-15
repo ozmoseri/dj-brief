@@ -237,6 +237,20 @@ const STEPS=['האירוע','מוזיקה','שירים','ציר זמן','סיכ�
 
 const S={mode:'landing',view:'list',key:null,token:null,dj:null,brand:null,events:[],ev:null,step:0,locked:false,save:'',results:{},q:{},wake:null};
 let saveTimer=null,dirty=false,saving=false,boothTimer=null;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+function merge3(base,local,remote){ // keep my changed fields, take theirs for the rest
+  const out=clone(remote||{}),keys=new Set([...Object.keys(local||{}),...Object.keys(base||{})]);
+  keys.forEach(k=>{if(!same(local[k],(base||{})[k])){if(local[k]===undefined)delete out[k];else out[k]=clone(local[k])}});
+  return norm(out);
+}
+function synced(data,rev){S.base=clone(data);S.rev=rev;S.syncedAt=Date.now();S.offline=false;cacheNow()}
+function cacheNow(){
+  if(S.mode==='admin'&&S.dj) ls.set('dj_cache',JSON.stringify({dj:S.dj,events:S.events,at:Date.now()}));
+  else if(S.mode==='client'&&S.ev) ls.set('ev_'+S.token,JSON.stringify({brand:S.brand,data:S.ev.data,rev:S.rev,locked:S.locked,at:Date.now()}));
+}
+const busyTyping=()=>{const a=document.activeElement;return !!a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)};
+const clock=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 
 function norm(d){
   d=d&&typeof d==='object'?d:{};
@@ -299,12 +313,24 @@ async function flush(){
   if(!dirty||!S.ev) return;
   if(saving){saveTimer=setTimeout(flush,400);return}
   saving=true;dirty=false;
+  const sent=clone(S.ev.data);
   try{
-    if(S.mode==='client') await rpc('client_save',{p_token:S.token,p_data:S.ev.data});
-    else{
-      const e=await rpc('dj_save_event',{p_key:S.key,p_id:S.ev.id,p_data:S.ev.data,p_notes:S.ev.dj_notes||'',p_locked:!!S.ev.locked,p_lock_days:+S.ev.lock_days||0});
-      S.ev.is_locked=e.is_locked;S.ev.updated_at=e.updated_at;
+    let res,remote,rev;
+    if(S.mode==='client'){
+      res=await rpc('client_save',{p_token:S.token,p_data:sent,p_base:S.rev||null});
+      if(res.conflict){remote=res.data;rev=res.updated_at}
+    }else{
+      res=await rpc('dj_save_event',{p_key:S.key,p_id:S.ev.id,p_data:sent,p_notes:S.ev.dj_notes||'',p_locked:!!S.ev.locked,p_lock_days:+S.ev.lock_days||0,p_base:S.rev||null});
+      if(res.conflict){remote=res.event.data;rev=res.event.updated_at}
+      else{S.ev.is_locked=res.is_locked;S.ev.updated_at=res.updated_at}
     }
+    if(remote){ // the other side saved first: merge field by field, then save again
+      S.ev.data=merge3(S.base,S.ev.data,norm(remote));S.base=clone(norm(remote));S.rev=rev;dirty=true;
+      if(!busyTyping()) render();
+      toast('התקבל עדכון מהצד השני, מיזגנו את השינויים');
+      saving=false;return flush();
+    }
+    synced(sent,res.updated_at);
     if(!dirty) setSave('saved');
   }catch(err){
     if(err.message==='locked'){S.locked=true;render();toast('הטופס ננעל לעריכה')}
@@ -312,8 +338,34 @@ async function flush(){
   }
   saving=false;
 }
+/* pull the other side's changes while this side is idle */
+async function pull(){
+  if(!S.ev||dirty||saving||document.hidden) return;
+  if(S.mode==='admin'&&S.view!=='event'&&S.view!=='booth') return;
+  if(S.mode!=='admin'&&S.mode!=='client') return;
+  try{
+    let data,rev,extra=null;
+    if(S.mode==='client'){const r=await rpc('client_get',{p_token:S.token});data=r.data;rev=r.updated_at;extra=r}
+    else{const e=await rpc('dj_get_event',{p_key:S.key,p_id:S.ev.id});data=e.data;rev=e.updated_at;extra=e}
+    if(dirty||saving) return;
+    S.syncedAt=Date.now();S.offline=false;
+    const lockNow=S.mode==='client'?extra.is_locked:S.locked;
+    if(rev===S.rev&&lockNow===S.locked){if(S.mode==='admin'&&extra.review&&!same(extra.review,S.ev.review)){S.ev.review=extra.review;if(!busyTyping()&&S.view==='event')render()}return}
+    if(busyTyping()&&S.view!=='booth') return; // try again next round
+    S.ev.data=norm(data);S.base=clone(S.ev.data);S.rev=rev;
+    if(S.mode==='client') S.locked=extra.is_locked;
+    else Object.assign(S.ev,{review:extra.review,client_updated_at:extra.client_updated_at,client_seen_at:extra.client_seen_at,is_locked:extra.is_locked,updated_at:extra.updated_at});
+    cacheNow();render();
+  }catch(_){S.offline=true}
+}
+setInterval(pull,15000);
 window.addEventListener('beforeunload',e=>{if(dirty){flush();e.preventDefault();e.returnValue=''}});
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&dirty){clearTimeout(saveTimer);flush()}});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){if(dirty){clearTimeout(saveTimer);flush()}return}
+  pull();
+  if(S.view==='booth'&&navigator.wakeLock) navigator.wakeLock.request('screen').then(w=>S.wake=w).catch(()=>{});
+});
+if('serviceWorker' in navigator) navigator.serviceWorker.register(BASE+'sw.js').catch(()=>{});
 
 /* ---------- boot ---------- */
 async function boot(){
@@ -326,7 +378,11 @@ async function boot(){
       if(S.mode==='review'){S.rv={stars:(r.review&&r.review.stars)||0,done:false};document.title=(r.brand.brand_name||'DJ')+' | איך היה?';render();return}
       document.title=(r.brand.brand_name||'DJ')+' | פרטי האירוע';
       if(S.ev.data.submitted) S.step=4;
-    }catch(e){app.innerHTML='<div class="wrap"><div class="hero"><h1>הקישור לא נמצא</h1><p>ייתכן שהקישור הועתק חלקית. בקשו מה-DJ לשלוח אותו שוב.</p></div></div>';return}
+      synced(S.ev.data,r.updated_at);
+    }catch(e){
+      const c=e.message!=='not found'&&JSON.parse(ls.get('ev_'+S.token)||'null');
+      if(c&&S.mode==='client'){S.brand=c.brand;S.locked=c.locked;S.ev={data:norm(c.data)};S.base=clone(S.ev.data);S.rev=c.rev;S.offline=true;S.syncedAt=c.at;setAccent(c.brand.accent);render();return}
+      app.innerHTML='<div class="wrap"><div class="hero"><h1>הקישור לא נמצא</h1><p>ייתכן שהקישור הועתק חלקית. בקשו מה-DJ לשלוח אותו שוב.</p></div></div>';return}
     render();return;
   }
   const h=/[#&]k=([A-Za-z0-9]{20,64})/.exec(location.hash);
@@ -335,14 +391,17 @@ async function boot(){
   if(!S.key){S.mode='landing';render();return}
   S.mode='admin';
   try{await loadAdmin()}catch(e){
+    const c=e.message!=='unauthorized'&&JSON.parse(ls.get('dj_cache')||'null');
     if(e.message==='unauthorized'){ls.del('djkey');S.mode='landing';S.badKey=true}
+    else if(c){S.dj=c.dj;S.brand=c.dj;S.events=c.events.map(x=>(x.data=norm(x.data),x));S.trash=[];S.offline=true;S.syncedAt=c.at;setAccent(c.dj.accent)}
     else{app.innerHTML='<div class="wrap"><div class="hero"><h1>אין חיבור</h1><p>בדקו את החיבור לאינטרנט ורעננו את הדף.</p></div></div>';return}
   }
   render();
 }
 async function loadAdmin(){
   const r=await rpc('dj_get',{p_key:S.key});
-  S.dj=r.dj;S.brand=r.dj;S.events=r.events.map(e=>(e.data=norm(e.data),e));setAccent(r.dj.accent);
+  S.dj=r.dj;S.brand=r.dj;S.events=r.events.map(e=>(e.data=norm(e.data),e));S.trash=r.trash||[];setAccent(r.dj.accent);
+  S.offline=false;S.syncedAt=Date.now();cacheNow();
   document.title=(r.dj.brand_name||'DJ')+' | ניהול אירועים';
 }
 
@@ -380,9 +439,11 @@ function renderList(){
     '<span class="st '+st[0]+'">'+st[1]+'</span></button>';
   };
   app.innerHTML='<div class="wrap wide"><div class="top">'+brandHTML(S.dj)+'<button class="btn quiet" data-act="settings">הגדרות</button></div>'+
+  (S.offline?'<div class="banner soft">אין חיבור כרגע. מוצגים הנתונים מהסנכרון האחרון ('+clock(S.syncedAt)+').</div>':'')+
   '<div class="headrow"><h2>האירועים שלי</h2><button class="btn accent" data-act="new">אירוע חדש</button></div>'+
   (evs.length?'':'<p class="empty">עדיין אין אירועים. צרו אירוע חדש, שלחו ללקוח את הקישור, והפרטים יתמלאו כאן.</p>')+
-  up.map(row).join('')+(past.length?'<h3>אירועים שעברו</h3>'+past.map(row).join(''):'')+'</div>';
+  up.map(row).join('')+(past.length?'<h3>אירועים שעברו</h3>'+past.map(row).join(''):'')+
+  ((S.trash||[]).length?'<h3>נמחקו ב-30 הימים האחרונים</h3>'+S.trash.map(t=>'<div class="evrow" style="grid-template-columns:1fr auto"><span><span class="n" dir="auto">'+esc(t.names||'אירוע ללא שם')+'</span><span class="m">'+esc(fmtDate(t.date))+'</span></span><button class="btn sm ghost" data-act="restore" data-id="'+t.id+'">שחזור</button></div>').join(''):'')+'</div>';
 }
 function renderSettings(){
   const d=S.dj;
@@ -552,10 +613,9 @@ function nowIdx(d){
   return idx;
 }
 function renderBooth(){
-  const e=S.ev,d=e.data;ls.set('booth_last',JSON.stringify(e));
   const draw=()=>{
-    const n=new Date(),idx=nowIdx(d),ms=Object.entries(d.moments).filter(x=>x[1]);
-    app.innerHTML='<div class="booth"><div class="bh"><div><div class="bn" dir="auto">'+esc(d.names||'אירוע')+'</div><div class="bm">'+esc([d.type,d.venue,d.guests?d.guests+' מוזמנים':''].filter(Boolean).join(', '))+'</div></div>'+
+    const e=S.ev,d=e.data,n=new Date(),idx=nowIdx(d),ms=Object.entries(d.moments).filter(x=>x[1]);
+    app.innerHTML='<div class="booth"><div class="bh"><div><div class="bn" dir="auto">'+esc(d.names||'אירוע')+'</div><div class="bm">'+esc([d.type,d.venue,d.guests?d.guests+' מוזמנים':''].filter(Boolean).join(', '))+'</div><div class="bm">'+(S.offline?'אין חיבור. ':'')+'סונכרן לאחרונה '+clock(S.syncedAt||Date.now())+'</div></div>'+
     '<div style="display:flex;gap:16px;align-items:center"><div class="clock">'+hhmm(n.getHours()*60+n.getMinutes())+'</div><button class="btn sm" data-act="boothexit">יציאה</button></div></div>'+
     '<div class="grid"><div><h4>ציר זמן</h4><ol class="bt">'+(d.timeline.length?d.timeline.map((r,i)=>'<li class="'+(i===idx?'now':i<idx?'past':'')+'"><span class="tm">'+esc(r.time||'')+'</span><span class="tt" dir="auto">'+esc(r.title||'')+(r.note?'<span class="tn" dir="auto">'+esc(r.note)+'</span>':'')+'</span></li>').join(''):'<li><span></span><span class="tn">אין ציר זמן לאירוע הזה.</span></li>')+'</ol>'+
     (ms.length?'<h4>רגעים מיוחדים</h4><ul class="bl">'+ms.map(m=>'<li><small>'+esc(m[0])+'</small><span dir="auto">'+esc(m[1])+'</span></li>').join('')+'</ul>':'')+'</div>'+
@@ -657,8 +717,8 @@ app.addEventListener('click',async e=>{
       const nm=d.names?' '+d.names:'',br=S.dj.brand_name||'ה-DJ';
       window.open('https://wa.me/'+waPhone(d.contact_phone)+'?text='+encodeURIComponent('היי'+nm+', כאן '+br+'. היה כיף גדול באירוע שלכם! אשמח אם תדרגו ותכתבו כמה מילים, זה לוקח חצי דקה:\n'+pubLink('r',ev.token)),'_blank','noopener');break}
     /* admin */
-    case 'new':{b.disabled=true;try{const n=await rpc('dj_create_event',{p_key:S.key,p_data:{}});n.data=norm(n.data);S.events.unshift(n);S.ev=n;S.step=0;S.view='event';S.save='';render();scrollTo(0,0)}catch(_){toast('לא הצלחנו ליצור אירוע. בדקו את החיבור');b.disabled=false}break}
-    case 'open':S.ev=S.events.find(x=>x.id===b.dataset.id);S.step=0;S.view='event';S.save='';S.q={};S.results={};render();scrollTo(0,0);break;
+    case 'new':{b.disabled=true;try{const n=await rpc('dj_create_event',{p_key:S.key,p_data:{}});n.data=norm(n.data);S.events.unshift(n);S.ev=n;S.step=0;S.view='event';S.save='';synced(n.data,n.updated_at);render();scrollTo(0,0)}catch(_){toast('לא הצלחנו ליצור אירוע. בדקו את החיבור');b.disabled=false}break}
+    case 'open':S.ev=S.events.find(x=>x.id===b.dataset.id);S.step=0;S.view='event';S.save='';S.q={};S.results={};S.base=clone(S.ev.data);S.rev=S.ev.updated_at;render();scrollTo(0,0);pull();break;
     case 'back':await flush();S.view='list';try{await loadAdmin()}catch(_){ }render();break;
     case 'settings':S.view='settings';render();break;
     case 'copylink':await copy(clientLink(ev.token));toast('הקישור הועתק');break;
@@ -669,7 +729,8 @@ app.addEventListener('click',async e=>{
       window.open('https://wa.me/'+waPhone(d.contact_phone)+'?text='+encodeURIComponent(txt),'_blank','noopener');break}
     case 'booth':await flush();S.view='booth';render();break;
     case 'boothexit':if(S.wake){S.wake.release().catch(()=>{});S.wake=null}S.view='event';render();break;
-    case 'del':if(confirm('למחוק את האירוע? אי אפשר לשחזר.')){try{await rpc('dj_delete_event',{p_key:S.key,p_id:ev.id});dirty=false;S.events=S.events.filter(x=>x.id!==ev.id);S.ev=null;S.view='list';render();toast('האירוע נמחק')}catch(_){toast('המחיקה נכשלה. נסו שוב')}}break;
+    case 'del':if(confirm('למחוק את האירוע? אפשר לשחזר אותו במשך 30 יום מרשימת האירועים.')){try{await rpc('dj_delete_event',{p_key:S.key,p_id:ev.id});dirty=false;S.ev=null;S.view='list';try{await loadAdmin()}catch(_){ }render();toast('האירוע נמחק. אפשר לשחזר מרשימת האירועים')}catch(_){toast('המחיקה נכשלה. נסו שוב')}}break;
+    case 'restore':b.disabled=true;try{await rpc('dj_restore_event',{p_key:S.key,p_id:b.dataset.id});await loadAdmin();render();toast('האירוע שוחזר')}catch(_){b.disabled=false;toast('השחזור נכשל. נסו שוב')}break;
     case 'rmlogo':S.dj.logo=null;render();toast('לחצו על שמירת הגדרות כדי לסיים');break;
     case 'savesettings':{
       const nb=$('#s_brand').value.trim(),np=$('#s_phone').value.trim(),na=$('#s_accent').value;
