@@ -1,5 +1,5 @@
-const C='djb-v1';
-self.addEventListener('install',()=>self.skipWaiting());
+const C='djb-v2';
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(x=>fetch('./',{cache:'no-store'}).then(r=>r.ok&&x.put('index',r))).catch(()=>{}))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
   const r=e.request;if(r.method!=='GET')return;
