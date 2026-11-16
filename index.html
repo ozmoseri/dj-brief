@@ -265,14 +265,17 @@ const GENRES=['מזרחית','ים תיכונית','פופ ישראלי','להי
 const MOMENTS={
   'חתונה':['כניסת החתן לחופה','כניסת הכלה לחופה','שבירת הכוס','כניסה לרחבה','ריקוד ראשון'],
   'בר / בת מצווה':['כניסת חתן / כלת השמחה','ריקוד עם ההורים','מצגת או הדלקת נרות'],
-  'חינה':['כניסה','טקס החינה'],
-  'יום הולדת':['כניסה','עוגה וברכות'],
+  'חינה':['כניסת החתן והכלה','טקס החינה','החלפת בגדים'],
+  'יום הולדת':['כניסת חתן / כלת השמחה','עוגה וברכות','ריקוד עם ההורים או החברים','מצגת או הפתעה'],
   'אירוע חברה':['פתיחה','נאומים או מצגת'],
   'אחר':['כניסה']
 };
 const PLAN={
   'חתונה':[[0,'קבלת פנים'],[75,'חופה'],[105,'כניסה לרחבה וריקוד ראשון'],[120,'מנה ראשונה'],[150,'סבב ריקודים ראשון'],[210,'מנה עיקרית'],[240,'סבב ריקודים שני']],
   'בר / בת מצווה':[[0,'קבלת פנים'],[60,'כניסת חתן / כלת השמחה'],[75,'מנה ראשונה'],[100,'סבב ריקודים ראשון'],[150,'מצגת וברכות'],[170,'מנה עיקרית'],[200,'סבב ריקודים שני']],
+  'חינה':[[0,'קבלת פנים'],[60,'כניסת החתן והכלה'],[75,'ארוחה'],[120,'טקס החינה'],[150,'ריקודים']],
+  'יום הולדת':[[0,'קבלת פנים'],[45,'כניסת חתן / כלת השמחה'],[60,'סבב ריקודים ראשון'],[120,'עוגה וברכות'],[140,'מצגת או הפתעה'],[160,'סבב ריקודים שני']],
+  'אירוע חברה':[[0,'קבלת פנים'],[45,'פתיחה ונאומים'],[75,'ארוחה'],[120,'מצגת או הופעה'],[140,'ריקודים']],
   '_':[[0,'קבלת פנים'],[45,'כניסה'],[60,'ארוחה'],[105,'ריקודים']]
 };
 const STEPS=['האירוע','מוזיקה','שירים','ציר זמן','סיכום'];
@@ -691,7 +694,7 @@ function renderEditor(){
     '<label class="sw"><input type="checkbox" data-ev="locked"'+(e.locked?' checked':'')+'> נעילת הטופס לעריכה של הלקוח</label>'+
     '<div class="field"><label for="f_lock">נעילה אוטומטית לפני האירוע</label><select id="f_lock" data-ev="lock_days">'+[[0,'בלי נעילה אוטומטית'],[1,'יום לפני'],[2,'יומיים לפני'],[3,'3 ימים לפני'],[7,'שבוע לפני']].map(o=>'<option value="'+o[0]+'"'+(+e.lock_days===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>'+
     '<div class="field"><label for="f_djn">הערות פרטיות</label><textarea id="f_djn" data-ev="dj_notes" dir="auto" placeholder="ציוד, תשלום, אנשי קשר במקום. הלקוח לא רואה את זה.">'+esc(e.dj_notes||'')+'</textarea></div>'+
-    '<div class="actions"><button class="btn ghost" data-act="remind">תזכורת בוואטסאפ ללקוח</button></div>'+
+    '<div class="actions"><button class="btn ghost" data-act="remind">תזכורת בוואטסאפ ללקוח</button><button class="btn ghost" data-act="booked">סטורי "נסגר תאריך"</button></div><p class="sub">הסטורי מציג רק את התאריך וסוג האירוע, בלי שם הלקוח.</p>'+
     '<h3>דירוג ותגובה</h3>'+(e.review?'<div class="revbox"><div class="s">'+'★'.repeat(e.review.stars)+'</div><p dir="auto">'+esc(e.review.text||'')+'</p><small dir="auto">'+esc(e.review.name||'')+'</small></div><div class="actions"><button class="btn accent" data-act="story">תמונה לסטורי</button><button class="btn ghost" data-act="copyreview">העתקת התגובה</button></div>':'<p class="sub">אחרי האירוע שלחו ללקוח בקשה לדרג. התגובה תופיע כאן, מוכנה לשיתוף בסטורי.</p>')+
     (e.review?'<label class="sw"><input type="checkbox" data-act="revpub"'+(e.review_public?' checked':'')+'><span>להציג בדף הביקורות הציבורי</span></label>':'')+
     '<div class="actions"><button class="btn ghost" data-act="askreview">בקשת דירוג בוואטסאפ</button><button class="btn quiet" data-act="copyreviewlink">העתקת קישור לדירוג</button></div>'+
@@ -760,6 +763,30 @@ function wrapText(ctx,text,maxW){
   const out=[];
   String(text).split(/\n+/).forEach(par=>{let line='';par.split(/\s+/).forEach(w=>{const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxW&&line){out.push(line);line=w}else line=t});if(line)out.push(line)});
   return out;
+}
+function shareCanvas(c,name){
+  c.toBlob(async blob=>{
+    const file=new File([blob],name,{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});return}catch(_){ }}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  },'image/png');
+}
+async function bookedStory(){
+  const d=S.ev.data,b=S.dj,acc=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#FF3D6E';
+  if(!d.date){toast('חסר תאריך לאירוע');return}
+  try{await document.fonts.load('700 120px Karantina');await document.fonts.load('500 56px "IBM Plex Sans Hebrew"')}catch(_){ }
+  const c=document.createElement('canvas');c.width=1080;c.height=1920;const x=c.getContext('2d');
+  x.fillStyle='#0A0A0B';x.fillRect(0,0,1080,1920);
+  const g=x.createRadialGradient(200,260,0,200,260,900);g.addColorStop(0,acc+'66');g.addColorStop(1,'#0A0A0B00');x.fillStyle=g;x.fillRect(0,0,1080,1920);
+  x.textAlign='center';x.direction='rtl';x.fillStyle='#FFFFFF';
+  x.font='700 250px Karantina, sans-serif';x.fillText('נסגר',540,640);x.fillText('תאריך',540,860);
+  const p=d.date.split('-');x.direction='ltr';x.fillStyle='#FFB020';x.font='700 300px Karantina, sans-serif';x.fillText(p[2]+'.'+p[1]+'.'+p[0].slice(2),540,1200);
+  x.direction='rtl';x.fillStyle='#FFFFFF';x.font='500 60px "IBM Plex Sans Hebrew", sans-serif';if(d.type&&d.type!=='אחר')x.fillText(d.type,540,1320);
+  x.fillStyle='#C9C4DD';x.font='500 46px "IBM Plex Sans Hebrew", sans-serif';x.fillText('רוצים לבדוק תאריך? שלחו הודעה',540,1500);
+  x.fillStyle='#FFFFFF';x.font='700 84px Karantina, sans-serif';x.direction='ltr';
+  if(b.logo){await new Promise(res=>{const im=new Image();im.onload=()=>{const k=Math.min(360/im.width,150/im.height);x.drawImage(im,540-im.width*k/2,1640,im.width*k,im.height*k);res()};im.onerror=res;im.src=b.logo})}
+  else{x.direction='rtl';x.fillText(b.brand_name||'',540,1740)}
+  shareCanvas(c,'booked-story.png');
 }
 async function storyImage(){
   const r=S.ev.review,b=S.dj;if(!r) return;
@@ -910,6 +937,7 @@ app.addEventListener('click',async e=>{
       try{await rpc('client_review',{p_token:S.token,p_stars:S.rv.stars,p_text:$('#r_text').value.trim(),p_name:$('#r_name').value.trim()});S.rv.done=true;render()}catch(_){b.disabled=false;toast('השליחה נכשלה. בדקו את החיבור ונסו שוב')}
       break}
     case 'story':storyImage();break;
+    case 'booked':bookedStory();break;
     case 'copyreview':await copy((ev.review.text||'')+(ev.review.name?'\n'+ev.review.name:''));toast('התגובה הועתקה');break;
     case 'copyreviewlink':await copy(pubLink('r',ev.token));toast('הקישור הועתק');break;
     case 'askreview':{

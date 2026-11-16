@@ -50,3 +50,15 @@ Supabase project `dj-event-brief` (ref `vtuyhvbgcwlzwtjlnydb`, eu-central-1, org
 ## Business context
 
 Competitors in Israel: Setly (setly.pro) and Plya (plya.io), both with a free tier of 3 events. Plan: side product, gate of 10 paying DJs in 30 days without ads, then the same engine for wedding photographers and makeup artists. Suggested pricing: free for 2 events, solo 69 ILS/month, agency 199 ILS/month.
+
+## Update 2026-11-16 (product name: "סגרנו אירוע")
+
+- Product renamed from "DJ Brief" to "סגרנו אירוע". Oz is builder/CEO, Liel is a silent partner who tests and markets in DJ groups; outreach never goes out in Liel's name.
+- First real event with Liel: 2026-12-02. Avoid risky changes to login/saving before it.
+- Routes (query params on the single page): `?l` landing, `?x` DJ directory + reviews feed, `?d=<slug>` public DJ profile, `?e=<token>` client form, `?r=<token>` review, `#k=<key>` admin. Adding `&demo` to `?x`/`?d`/`?l` shows clearly-labelled sample content (never insert fake reviews into real data).
+- New tables/columns: `join_requests` (landing form, RPC `join_request`), `djs.slug/tagline/area/instagram/listed`, `events.review_public`.
+- New RPCs: `dj_public`, `directory`, `dj_update_public`, `dj_review_public`, `dj_rotate_key`.
+- UI rules now in force: bottom tab bar (no hamburger), min 44px targets, smallest text 13-14px, headings use clamp sizes. Client form has no tab bar on purpose.
+- After editing index.html always run the node syntax check before pushing, and bump the cache name in sw.js.
+- Contact: sagarnu.irua@gmail.com, Instagram @sagarnu.irua. Domain not bought yet (sagarnu-irua.co.il is free).
+- Open: Google login, self-signup, payments, notification on new join requests (needs an email provider), profile photos, per-URL link previews.

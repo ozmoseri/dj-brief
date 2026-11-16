@@ -1,4 +1,4 @@
-const C='djb-v16';
+const C='djb-v17';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(x=>fetch('./',{cache:'no-store'}).then(r=>r.ok&&x.put('index',r))).catch(()=>{}))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
